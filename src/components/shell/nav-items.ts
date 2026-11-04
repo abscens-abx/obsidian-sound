@@ -1,4 +1,14 @@
-import { Disc3, Home, ListMusic, Mic2, Music2, Search, Settings, Library, ListOrdered } from "lucide-react";
+import {
+  Disc3,
+  Home,
+  ListMusic,
+  Mic2,
+  Music2,
+  Search,
+  Settings,
+  Library,
+  ListOrdered,
+} from "lucide-react";
 
 export const primaryNav = [
   { to: "/", label: "Home", icon: Home },

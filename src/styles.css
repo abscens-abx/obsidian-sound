@@ -156,7 +156,14 @@
 /* Abstract placeholder for missing artwork: concentric silver rings, no image */
 @utility art-void {
   background:
-    radial-gradient(circle at 50% 50%, transparent 0 22%, var(--hairline) 22.5% 23%, transparent 23.5% 38%, var(--hairline) 38.5% 39%, transparent 39.5%),
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 22%,
+      var(--hairline) 22.5% 23%,
+      transparent 23.5% 38%,
+      var(--hairline) 38.5% 39%,
+      transparent 39.5%
+    ),
     var(--graphite);
   box-shadow: var(--shadow-art);
 }

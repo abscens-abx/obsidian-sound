@@ -33,4 +33,4 @@ export function EmptyState({
 }
 
 export const NATIVE_IMPORT_NOTE =
-  "Importing music runs in the Android app through MediaStore and the system folder picker. It is not available in this web preview.";
+  "Adding music needs Android MediaStore scanning and the system folder picker. Neither is built yet, and neither can run in the web preview.";

@@ -25,7 +25,11 @@ function SearchPage() {
         <label htmlFor={id} className="sr-only">
           Search your library
         </label>
-        <SearchIcon className="pointer-events-none absolute left-0 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+        <SearchIcon
+          className="pointer-events-none absolute left-0 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
+          strokeWidth={1.5}
+          aria-hidden
+        />
         <input
           id={id}
           type="search"

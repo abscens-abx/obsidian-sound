@@ -17,7 +17,9 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
     <div role="alert" className="max-w-md">
       <p className="eyebrow mb-3">Error</p>
       <h1 className="display-title text-4xl text-platinum">This view couldn't load</h1>
-      <p className="mt-3 text-sm text-muted-foreground">{error instanceof Error ? error.message : "Unexpected error."}</p>
+      <p className="mt-3 text-sm text-muted-foreground">
+        {error instanceof Error ? error.message : "Unexpected error."}
+      </p>
       <button
         type="button"
         onClick={() => {

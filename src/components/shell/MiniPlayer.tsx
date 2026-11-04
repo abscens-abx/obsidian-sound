@@ -17,7 +17,9 @@ export function MiniPlayer() {
     >
       <span aria-hidden className="art-void size-9 shrink-0 rounded-sm" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm text-platinum">{idle ? "Nothing playing" : "Now playing"}</span>
+        <span className="block truncate text-sm text-platinum">
+          {idle ? "Nothing playing" : "Now playing"}
+        </span>
         <span className="block truncate text-xs text-muted-foreground">
           {idle ? "Choose a track from your library" : state.status}
         </span>

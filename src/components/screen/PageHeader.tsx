@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 
-export function PageHeader({ eyebrow, title, meta }: { eyebrow: string; title: string; meta?: ReactNode }) {
+export function PageHeader({
+  eyebrow,
+  title,
+  meta,
+}: {
+  eyebrow: string;
+  title: string;
+  meta?: ReactNode;
+}) {
   return (
     <header className="rise-in mb-10 border-b border-hairline pb-6 md:mb-14">
       <p className="eyebrow mb-3">{eyebrow}</p>

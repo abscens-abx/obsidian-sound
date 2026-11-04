@@ -25,7 +25,11 @@ export function LibraryCollection<T extends { id: string }>({
   const { data } = useSuspenseQuery(query);
   return (
     <>
-      <PageHeader eyebrow={eyebrow} title={title} meta={`${data.length} ${data.length === 1 ? noun[0] : noun[1]}`} />
+      <PageHeader
+        eyebrow={eyebrow}
+        title={title}
+        meta={`${data.length} ${data.length === 1 ? noun[0] : noun[1]}`}
+      />
       {data.length === 0 ? (
         <EmptyState {...empty} note={empty.note ?? NATIVE_IMPORT_NOTE} />
       ) : (

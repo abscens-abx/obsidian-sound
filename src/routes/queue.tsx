@@ -13,7 +13,11 @@ function Queue() {
   const { queue } = usePlaybackState();
   return (
     <>
-      <PageHeader eyebrow="Up next" title="Queue" meta={`${queue.length} ${queue.length === 1 ? "track" : "tracks"}`} />
+      <PageHeader
+        eyebrow="Up next"
+        title="Queue"
+        meta={`${queue.length} ${queue.length === 1 ? "track" : "tracks"}`}
+      />
       {queue.length === 0 && (
         <EmptyState
           title="Queue is empty"
