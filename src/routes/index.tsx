@@ -28,7 +28,7 @@ function Home() {
         </p>
       </section>
 
-      <dl className="mb-14 grid grid-cols-2 border-y border-hairline sm:grid-cols-4">
+      <ul aria-label="Library totals" className="mb-14 grid grid-cols-2 gap-px border border-hairline bg-hairline sm:grid-cols-4">
         {(
           [
             ["Songs", data.tracks, "/songs"],
@@ -37,16 +37,17 @@ function Home() {
             ["Playlists", data.playlists, "/playlists"],
           ] as const
         ).map(([label, n, to], i) => (
+          <li key={label}>
           <Link
-            key={label}
             to={to}
-            className={`group block px-1 py-5 transition-colors hover:bg-card sm:px-5 ${i % 2 ? "pl-5" : ""} ${i > 0 ? "sm:border-l sm:border-hairline" : ""} ${i === 1 || i === 3 ? "border-l border-hairline" : ""} ${i > 1 ? "border-t border-hairline sm:border-t-0" : ""}`}
+            className="block bg-background px-5 py-5 transition-colors hover:bg-card"
           >
-            <dt className="eyebrow">{label}</dt>
-            <dd className="mt-2 font-mono text-3xl tabular-nums text-platinum">{n}</dd>
+            <span className="eyebrow block">{label}</span>
+            <span className="mt-2 block font-mono text-3xl tabular-nums text-platinum">{n}</span>
           </Link>
+          </li>
         ))}
-      </dl>
+      </ul>
 
       {isEmpty && (
         <EmptyState
