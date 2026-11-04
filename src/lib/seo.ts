@@ -1,4 +1,4 @@
-const APP = "Obsidian";
+const APP = "LAWLIET";
 
 export function pageHead(title: string, description: string) {
   const full = `${title} — ${APP}`;

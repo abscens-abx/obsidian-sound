@@ -80,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Obsidian — Local Music Player" },
+      { title: "LAWLIET — Local Music Player" },
       { name: "description", content: "An offline-first player for the music you own." },
       { name: "theme-color", content: "#08090B" },
     ],

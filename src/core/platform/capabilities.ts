@@ -18,6 +18,8 @@ export interface Capability {
   key: CapabilityKey;
   label: string;
   available: boolean;
+  /** Native code for this capability is present in this build (not yet proof it works). */
+  implemented?: boolean;
   requires: string;
 }
 
@@ -103,6 +105,15 @@ export function markCapability(key: CapabilityKey, available: boolean) {
   info = {
     ...info,
     capabilities: info.capabilities.map((c) => (c.key === key ? { ...c, available } : c)),
+  };
+  listeners.forEach((l) => l());
+}
+
+/** Records that native code exists for `key`. Never makes it available. */
+export function markImplemented(key: CapabilityKey) {
+  info = {
+    ...info,
+    capabilities: info.capabilities.map((c) => (c.key === key ? { ...c, implemented: true } : c)),
   };
   listeners.forEach((l) => l());
 }

@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { getLibraryRepository } from "./repository";
+import { getScanRepository } from "../scan/scan-store";
 
 export const librarySummaryQuery = queryOptions({
   queryKey: ["library", "summary"],
@@ -32,3 +33,9 @@ export const searchQuery = (q: string) =>
     queryFn: () => getLibraryRepository().search(q),
     enabled: q.trim().length > 0,
   });
+
+/** Saved scan sources (device + folders). Empty when scanning is not supported. */
+export const sourcesQuery = queryOptions({
+  queryKey: ["library", "sources"],
+  queryFn: async () => (await getScanRepository()?.listSources()) ?? [],
+});

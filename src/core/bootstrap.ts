@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { migrate } from "./db/migrate";
 import { SqliteLibraryRepository } from "./library/sqlite-repository";
 import { setLibraryRepository } from "./library/repository";
-import { detectRuntime, markCapability, setRuntime } from "./platform/capabilities";
+import { detectRuntime, markCapability, markImplemented, isCapabilityAvailable, setRuntime } from "./platform/capabilities";
 
 let started: Promise<void> | null = null;
 
@@ -21,12 +21,25 @@ export function bootstrapNative(queryClient: QueryClient): Promise<void> {
       const { openCapacitorDatabase } = await import("./db/capacitor-sqlite");
       const db = await openCapacitorDatabase();
       await migrate(db);
-      setLibraryRepository(new SqliteLibraryRepository(db));
+      const repo = new SqliteLibraryRepository(db);
+      setLibraryRepository(repo);
       markCapability("offlineDatabase", true);
       await queryClient.invalidateQueries({ queryKey: ["library"] });
+
+      // Scanning needs both the database and the native plugin. Presence of the
+      // plugin only marks the code as implemented; availability is earned by a
+      // successful scan/import (see scan-store).
+      const { loadLibraryPlugin } = await import("./native/library-plugin");
+      const plugin = await loadLibraryPlugin();
+      if (plugin) {
+        const { configureScanning } = await import("./scan/scan-store");
+        configureScanning({ plugin, repo, queryClient });
+        markImplemented("localDiscovery");
+        markImplemented("folderImport");
+      }
     } catch (error) {
-      console.error("Offline database failed to initialise", error);
-      markCapability("offlineDatabase", false);
+      console.error("Offline library failed to initialise", error);
+      if (!isCapabilityAvailable("offlineDatabase")) markCapability("offlineDatabase", false);
     }
   })();
   return started;
