@@ -18,7 +18,7 @@ export function LibraryCollection<T extends { id: string }>({
   eyebrow: string;
   title: string;
   noun: [string, string];
-  query: UseSuspenseQueryOptions<T[], Error, T[], readonly unknown[]>;
+  query: UseSuspenseQueryOptions<T[], Error, T[], string[]>;
   empty: { title: string; body: string; note?: string };
   renderItem: (item: T) => ReactNode;
 }) {
