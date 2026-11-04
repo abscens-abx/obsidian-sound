@@ -27,3 +27,20 @@ npm run dev
 - TypeScript
 - React
 - Tailwind CSS
+
+## Android (Capacitor)
+
+Obsidian Sound ships as a Capacitor 8 Android app (`app.obsidiansound.player`). Native source is in `android/`.
+
+Requirements: Node 20+, JDK 21, Android Studio with SDK 36.
+
+```sh
+npm install
+npm run cap:sync     # SPA build -> dist/capacitor -> android/ (runs build:android + cap sync)
+npm run cap:open     # open in Android Studio, then Run or Build > Generate Signed Bundle/APK
+```
+
+Implemented: Android shell, runtime detection, on-device SQLite with versioned migrations, read-only SQLite library repository.
+Not implemented: music scanning (MediaStore), folder import (SAF), playback (Media3), background/lock-screen/headset controls, lyrics sync. See `docs/`.
+
+Tests: `npm test` (migrations run against a real in-memory SQLite).

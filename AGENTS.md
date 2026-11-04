@@ -14,3 +14,6 @@
 - No fixture or fabricated library data in the UI; empty states explain what is missing.
 - Screens share `PageHeader`, `EmptyState`, `LibraryCollection`; every route uses `pageHead()` for metadata — keeps visuals and SEO consistent.
 - See docs/ARCHITECTURE.md and docs/DECISIONS.md before structural changes.
+- Schema changes are new append-only migrations in `src/core/db/migrations.ts`; never edit a shipped one — devices already applied it.
+- Manual metadata edits go to `track_field_overrides` / `track_artists.source='manual'`; scanners write only embedded columns, so user corrections survive rescans.
+- Native plugins are loaded only via dynamic import after runtime detection, so web/SSR never evaluates them; run `npm run cap:sync` after web changes for the Android app.
