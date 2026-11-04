@@ -1,14 +1,34 @@
-import type { SqlExecutor } from "../db/executor";
-import type { Album, Artist, ArtistCredit, LibrarySummary, Playlist, Track } from "../types";
+import { inTransaction, type SqlExecutor } from "../db/executor";
+import { nameKey, type ScannedTrack } from "../scan/normalize";
+import type {
+  Album,
+  Artist,
+  ArtistCredit,
+  LibrarySource,
+  LibrarySummary,
+  Playlist,
+  Track,
+} from "../types";
 import type { LibraryRepository } from "./repository";
 
+export const MEDIASTORE_SOURCE_ID = "mediastore";
+
+function defaultId(): string {
+  const c = globalThis.crypto as Crypto | undefined;
+  if (c?.randomUUID) return c.randomUUID();
+  const b = new Uint8Array(16);
+  c?.getRandomValues?.(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+}
+
 /**
- * Read side of the SQLite library. Effective metadata = manual override ?? embedded.
- * Write paths (scanning, editing) arrive in later milestones.
+ * SQLite library. Effective metadata = manual override ?? embedded.
+ * Scan writes touch only embedded columns and `source='embedded'` credits;
+ * manual overrides and manual credits are never written here.
  */
 
 const EFFECTIVE_TRACKS = `
-SELECT t.id, t.source_uri, t.album_id, t.duration_ms, t.artwork_ref, t.created_at,
+SELECT t.id, t.source_uri, t.title_source, t.album_id, t.duration_ms, t.artwork_ref, t.created_at,
   COALESCE(o_title.value, t.title) AS title,
   COALESCE(o_album.value, al.title) AS album_title,
   COALESCE(CAST(o_year.value AS INTEGER), t.year) AS year,
@@ -33,6 +53,7 @@ WHERE t.is_available = 1`;
 type TrackRow = {
   id: string;
   source_uri: string;
+  title_source: "embedded" | "filename";
   album_id: string | null;
   duration_ms: number;
   artwork_ref: string | null;
@@ -59,7 +80,248 @@ type CreditRow = {
 };
 
 export class SqliteLibraryRepository implements LibraryRepository {
-  constructor(private readonly db: SqlExecutor) {}
+  private artistIds = new Map<string, string>();
+  private albumIds = new Map<string, string>();
+
+  constructor(
+    private readonly db: SqlExecutor,
+    private readonly newId: () => string = defaultId,
+  ) {}
+
+  // ---------- sources ----------
+
+  async listSources(): Promise<LibrarySource[]> {
+    const rows = await this.db.query<{
+      id: string;
+      kind: LibrarySource["kind"];
+      tree_uri: string | null;
+      display_name: string;
+      last_scanned_at: number | null;
+      last_scan_status: LibrarySource["lastScanStatus"];
+      track_count: number;
+    }>(`SELECT s.id, s.kind, s.tree_uri, s.display_name, s.last_scanned_at, s.last_scan_status,
+        (SELECT COUNT(*) FROM tracks t WHERE t.source_id = s.id AND t.is_available = 1) AS track_count
+      FROM library_sources s ORDER BY s.kind DESC, s.display_name COLLATE NOCASE, s.id`);
+    return rows.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      treeUri: r.tree_uri,
+      displayName: r.display_name,
+      lastScannedAt: r.last_scanned_at == null ? null : new Date(Number(r.last_scanned_at)).toISOString(),
+      lastScanStatus: r.last_scan_status,
+      trackCount: Number(r.track_count),
+    }));
+  }
+
+  async ensureMediaStoreSource(): Promise<string> {
+    await this.db.run(
+      "INSERT OR IGNORE INTO library_sources (id, kind, display_name) VALUES (?, 'mediastore', 'Device music')",
+      [MEDIASTORE_SOURCE_ID],
+    );
+    return MEDIASTORE_SOURCE_ID;
+  }
+
+  /** Idempotent per tree URI; refreshes the display name. */
+  async upsertFolderSource(treeUri: string, displayName: string): Promise<string> {
+    const [existing] = await this.db.query<{ id: string }>(
+      "SELECT id FROM library_sources WHERE tree_uri = ?",
+      [treeUri],
+    );
+    if (existing) {
+      await this.db.run("UPDATE library_sources SET display_name = ? WHERE id = ?", [
+        displayName,
+        existing.id,
+      ]);
+      return existing.id;
+    }
+    const id = this.newId();
+    await this.db.run(
+      "INSERT INTO library_sources (id, kind, tree_uri, display_name) VALUES (?, 'saf', ?, ?)",
+      [id, treeUri, displayName],
+    );
+    return id;
+  }
+
+  beginScan(): string {
+    return this.newId();
+  }
+
+  // ---------- scan writes ----------
+
+  /**
+   * Upserts one batch in a single transaction, keyed by source URI. Returns
+   * how many rows were newly added vs refreshed.
+   */
+  async applyScanBatch(
+    sourceId: string,
+    scanId: string,
+    items: ScannedTrack[],
+  ): Promise<{ added: number; updated: number }> {
+    if (items.length === 0) return { added: 0, updated: 0 };
+    // De-duplicate within the batch: same URI -> last one wins.
+    const byUri = new Map(items.map((i) => [i.sourceUri, i]));
+    const unique = [...byUri.values()];
+    try {
+      return await inTransaction(this.db, async () => {
+        const uris = unique.map((i) => i.sourceUri);
+        const existingRows = await this.db.query<{ id: string; source_uri: string }>(
+          `SELECT id, source_uri FROM tracks WHERE source_uri IN (${uris.map(() => "?").join(",")})`,
+          uris,
+        );
+        const existing = new Map(existingRows.map((r) => [r.source_uri, r.id]));
+        let added = 0;
+        let updated = 0;
+        const now = Date.now();
+        for (const it of unique) {
+          const artistId = it.artist ? await this.artistId(it.artist) : null;
+          const groupArtist = it.albumArtist ?? it.artist;
+          const albumArtistId = groupArtist ? await this.artistId(groupArtist) : null;
+          const albumId = it.album ? await this.albumId(it.album, albumArtistId, it.year) : null;
+          const embedded = [
+            it.sourceKind,
+            it.mediastoreId,
+            it.mimeType,
+            it.sizeBytes,
+            it.modifiedAt,
+            it.title,
+            it.titleSource,
+            albumId,
+            it.trackNumber,
+            it.discNumber,
+            it.durationMs,
+            it.year,
+            it.genre,
+            it.artworkRef,
+            sourceId,
+            scanId,
+            now,
+          ];
+          let trackId = existing.get(it.sourceUri);
+          if (trackId) {
+            await this.db.run(
+              `UPDATE tracks SET source_kind = ?, mediastore_id = ?, mime_type = ?, size_bytes = ?,
+                source_modified_at = ?, title = ?, title_source = ?, album_id = ?, track_number = ?,
+                disc_number = ?, duration_ms = ?, year = ?, genre = ?, artwork_ref = ?, source_id = ?,
+                last_seen_scan_id = ?, updated_at = ?, is_available = 1
+               WHERE id = ?`,
+              [...embedded, trackId],
+            );
+            updated++;
+          } else {
+            trackId = this.newId();
+            await this.db.run(
+              `INSERT INTO tracks (source_kind, mediastore_id, mime_type, size_bytes, source_modified_at,
+                title, title_source, album_id, track_number, disc_number, duration_ms, year, genre,
+                artwork_ref, source_id, last_seen_scan_id, updated_at, id, source_uri, is_available)
+               VALUES (${embedded.map(() => "?").join(",")}, ?, ?, 1)`,
+              [...embedded, trackId, it.sourceUri],
+            );
+            existing.set(it.sourceUri, trackId);
+            added++;
+          }
+          // Refresh embedded credits only; manual credits are untouched.
+          await this.db.run("DELETE FROM track_artists WHERE track_id = ? AND source = 'embedded'", [
+            trackId,
+          ]);
+          if (artistId) {
+            await this.db.run(
+              "INSERT INTO track_artists (track_id, artist_id, role, position, source) VALUES (?, ?, 'primary', 0, 'embedded')",
+              [trackId, artistId],
+            );
+          }
+        }
+        return { added, updated };
+      });
+    } catch (error) {
+      // Cached IDs may refer to rows that were rolled back.
+      this.artistIds.clear();
+      this.albumIds.clear();
+      throw error;
+    }
+  }
+
+  /**
+   * Records the scan outcome. Only a completed scan marks unseen tracks of
+   * this source unavailable; rows are never deleted, so playlists, history and
+   * manual edits keep their references and recover if the file returns.
+   */
+  async finishScan(
+    sourceId: string,
+    scanId: string,
+    status: "completed" | "cancelled" | "failed",
+  ): Promise<{ markedUnavailable: number }> {
+    return inTransaction(this.db, async () => {
+      let markedUnavailable = 0;
+      if (status === "completed") {
+        const where =
+          "source_id = ? AND is_available = 1 AND (last_seen_scan_id IS NULL OR last_seen_scan_id != ?)";
+        const [row] = await this.db.query<{ n: number }>(
+          `SELECT COUNT(*) AS n FROM tracks WHERE ${where}`,
+          [sourceId, scanId],
+        );
+        markedUnavailable = Number(row?.n ?? 0);
+        await this.db.run(`UPDATE tracks SET is_available = 0, updated_at = ? WHERE ${where}`, [
+          Date.now(),
+          sourceId,
+          scanId,
+        ]);
+      }
+      await this.db.run(
+        "UPDATE library_sources SET last_scan_id = ?, last_scanned_at = ?, last_scan_status = ? WHERE id = ?",
+        [scanId, Date.now(), status, sourceId],
+      );
+      return { markedUnavailable };
+    });
+  }
+
+  private async artistId(name: string): Promise<string> {
+    const key = nameKey(name);
+    const cached = this.artistIds.get(key);
+    if (cached) return cached;
+    await this.db.run("INSERT OR IGNORE INTO artists (id, name, name_key) VALUES (?, ?, ?)", [
+      this.newId(),
+      name,
+      key,
+    ]);
+    const [row] = await this.db.query<{ id: string }>("SELECT id FROM artists WHERE name_key = ?", [
+      key,
+    ]);
+    if (!row) throw new Error("artist upsert failed");
+    this.artistIds.set(key, row.id);
+    return row.id;
+  }
+
+  private async albumId(title: string, artistId: string | null, year: number | null) {
+    const key = nameKey(title);
+    const cacheKey = `${key}\u0000${artistId ?? ""}`;
+    let id = this.albumIds.get(cacheKey);
+    if (!id) {
+      const [row] = await this.db.query<{ id: string }>(
+        "SELECT id FROM albums WHERE title_key = ? AND album_artist_id IS ?",
+        [key, artistId],
+      );
+      id = row?.id;
+      if (!id) {
+        id = this.newId();
+        await this.db.run(
+          "INSERT INTO albums (id, title, title_key, album_artist_id, year) VALUES (?, ?, ?, ?, ?)",
+          [id, title, key, artistId, year],
+        );
+      }
+      this.albumIds.set(cacheKey, id);
+    }
+    if (year !== null) {
+      await this.db.run("UPDATE albums SET year = ?, updated_at = ? WHERE id = ? AND year IS NOT ?", [
+        year,
+        Date.now(),
+        id,
+        year,
+      ]);
+    }
+    return id;
+  }
+
+  // ---------- reads ----------
 
   async getSummary(): Promise<LibrarySummary> {
     const [row = { tracks: 0, albums: 0, artists: 0, playlists: 0 }] = await this.db.query<
@@ -194,7 +456,7 @@ export class SqliteLibraryRepository implements LibraryRepository {
         year: r.year,
         genre: r.genre,
         fieldSources: {
-          title: r.title_manual ? "manual" : "embedded",
+          title: r.title_manual ? "manual" : r.title_source === "filename" ? "filename" : "embedded",
           credits: manual.length > 0 ? "manual" : "embedded",
           albumTitle: r.album_manual ? "manual" : "embedded",
           year: r.year_manual ? "manual" : "embedded",
