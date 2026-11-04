@@ -13,14 +13,21 @@ export const Route = createFileRoute("/songs")({
       title="Songs"
       noun={["song", "songs"]}
       query={tracksQuery}
-      empty={{ title: "No songs", body: "Tracks you add to your library are listed here, sorted by title." }}
+      empty={{
+        title: "No songs",
+        body: "Tracks you add to your library are listed here, sorted by title.",
+      }}
       renderItem={(t) => (
         <div className="flex items-center justify-between gap-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm text-platinum">{t.title}</p>
-            <p className="truncate text-xs text-muted-foreground">{t.credits.map((c) => c.name).join(", ")}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {t.credits.map((c) => c.name).join(", ")}
+            </p>
           </div>
-          <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatDuration(t.durationMs)}</span>
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">
+            {formatDuration(t.durationMs)}
+          </span>
         </div>
       )}
     />

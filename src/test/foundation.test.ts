@@ -9,7 +9,12 @@ import { formatDuration } from "@/lib/format";
 
 describe("foundation", () => {
   it("web preview library is genuinely empty (no fixtures)", async () => {
-    expect(await new EmptyLibraryRepository().getSummary()).toEqual({ tracks: 0, albums: 0, artists: 0, playlists: 0 });
+    expect(await new EmptyLibraryRepository().getSummary()).toEqual({
+      tracks: 0,
+      albums: 0,
+      artists: 0,
+      playlists: 0,
+    });
   });
 
   it("web preview never claims native playback", async () => {
@@ -24,11 +29,18 @@ describe("foundation", () => {
     expect(formatDuration(3_725_000)).toBe("1:02:05");
   });
 
-  it.each(["/songs", "/albums", "/artists", "/playlists", "/search", "/library", "/queue", "/now-playing", "/settings"])(
-    "matches %s",
-    (path) => {
-      const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
-      expect(router.matchRoutes(path).at(-1)?.routeId).toBe(path);
-    },
-  );
+  it.each([
+    "/songs",
+    "/albums",
+    "/artists",
+    "/playlists",
+    "/search",
+    "/library",
+    "/queue",
+    "/now-playing",
+    "/settings",
+  ])("matches %s", (path) => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    expect(router.matchRoutes(path).at(-1)?.routeId).toBe(path);
+  });
 });

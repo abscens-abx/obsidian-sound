@@ -28,7 +28,10 @@ function Home() {
         </p>
       </section>
 
-      <ul aria-label="Library totals" className="mb-14 grid grid-cols-2 gap-px border border-hairline bg-hairline sm:grid-cols-4">
+      <ul
+        aria-label="Library totals"
+        className="mb-14 grid grid-cols-2 gap-px border border-hairline bg-hairline sm:grid-cols-4"
+      >
         {(
           [
             ["Songs", data.tracks, "/songs"],
@@ -38,13 +41,10 @@ function Home() {
           ] as const
         ).map(([label, n, to], i) => (
           <li key={label}>
-          <Link
-            to={to}
-            className="block bg-background px-5 py-5 transition-colors hover:bg-card"
-          >
-            <span className="eyebrow block">{label}</span>
-            <span className="mt-2 block font-mono text-3xl tabular-nums text-platinum">{n}</span>
-          </Link>
+            <Link to={to} className="block bg-background px-5 py-5 transition-colors hover:bg-card">
+              <span className="eyebrow block">{label}</span>
+              <span className="mt-2 block font-mono text-3xl tabular-nums text-platinum">{n}</span>
+            </Link>
           </li>
         ))}
       </ul>

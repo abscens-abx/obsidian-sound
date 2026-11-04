@@ -8,7 +8,7 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // CAPACITOR_BUILD=1 produces a static SPA shell for the Android WebView
 // (no server runtime on device). Normal web builds are unchanged.
-const capacitor = process.env.CAPACITOR_BUILD === "1";
+const capacitor = process.env["CAPACITOR_BUILD"] === "1";
 
 export default defineConfig({
   tanstackStart: {

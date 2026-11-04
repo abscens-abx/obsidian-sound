@@ -33,7 +33,9 @@ function memoryDb(): SqlExecutor & { raw: DatabaseSync } {
 describe("migrations", () => {
   it("are numbered 1..n in order", () => {
     expect(() => validateMigrations(MIGRATIONS)).not.toThrow();
-    expect(() => validateMigrations([MIGRATIONS[0], { ...MIGRATIONS[0], version: 3 }])).toThrow(MigrationError);
+    expect(() => validateMigrations([MIGRATIONS[0], { ...MIGRATIONS[0], version: 3 }])).toThrow(
+      MigrationError,
+    );
   });
 
   it("apply once and are idempotent on re-run", async () => {
@@ -48,25 +50,43 @@ describe("migrations", () => {
   it("create every core table", async () => {
     const db = memoryDb();
     await migrate(db);
-    const names = (await db.query<{ name: string }>("SELECT name FROM sqlite_master WHERE type='table'")).map((r) => r.name);
+    const names = (
+      await db.query<{ name: string }>("SELECT name FROM sqlite_master WHERE type='table'")
+    ).map((r) => r.name);
     for (const t of [
-      "tracks", "artists", "track_artists", "albums", "playlists", "playlist_tracks",
-      "lyrics", "lyric_lines", "lyric_words", "favorites", "playback_history", "app_preferences",
+      "tracks",
+      "artists",
+      "track_artists",
+      "albums",
+      "playlists",
+      "playlist_tracks",
+      "lyrics",
+      "lyric_lines",
+      "lyric_words",
+      "favorites",
+      "playback_history",
+      "app_preferences",
       "track_field_overrides",
-    ]) expect(names).toContain(t);
+    ])
+      expect(names).toContain(t);
   });
 
   it("enforce foreign keys", async () => {
     const db = memoryDb();
     await migrate(db);
     await expect(
-      db.run("INSERT INTO playlist_tracks (playlist_id, position, track_id) VALUES ('nope', 0, 'nope')"),
+      db.run(
+        "INSERT INTO playlist_tracks (playlist_id, position, track_id) VALUES ('nope', 0, 'nope')",
+      ),
     ).rejects.toThrow(/FOREIGN KEY/);
   });
 
   it("roll back a failing migration and leave version unchanged", async () => {
     const db = memoryDb();
-    const bad = [...MIGRATIONS, { version: 2, name: "bad", sql: "CREATE TABLE x (a); SELECT * FROM missing_table;" }];
+    const bad = [
+      ...MIGRATIONS,
+      { version: 2, name: "bad", sql: "CREATE TABLE x (a); SELECT * FROM missing_table;" },
+    ];
     await expect(migrate(db, bad)).rejects.toThrow();
     const rows = await db.query<{ version: number }>("SELECT version FROM schema_migrations");
     expect(rows.map((r) => r.version)).toEqual([1]);

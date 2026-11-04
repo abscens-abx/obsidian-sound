@@ -12,7 +12,10 @@ export const Route = createFileRoute("/artists")({
       title="Artists"
       noun={["artist", "artists"]}
       query={artistsQuery}
-      empty={{ title: "No artists", body: "Every credited artist, including featured credits, will be listed here." }}
+      empty={{
+        title: "No artists",
+        body: "Every credited artist, including featured credits, will be listed here.",
+      }}
       renderItem={(a) => (
         <div className="flex items-center justify-between py-3">
           <p className="truncate text-sm text-platinum">{a.name}</p>

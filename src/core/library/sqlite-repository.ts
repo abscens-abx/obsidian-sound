@@ -50,13 +50,21 @@ type TrackRow = {
   is_favorite: number;
 };
 
-type CreditRow = { track_id: string; artist_id: string; name: string; role: ArtistCredit["role"]; source: string };
+type CreditRow = {
+  track_id: string;
+  artist_id: string;
+  name: string;
+  role: ArtistCredit["role"];
+  source: string;
+};
 
 export class SqliteLibraryRepository implements LibraryRepository {
   constructor(private readonly db: SqlExecutor) {}
 
   async getSummary(): Promise<LibrarySummary> {
-    const [row] = await this.db.query<Record<keyof LibrarySummary, number>>(`SELECT
+    const [row = { tracks: 0, albums: 0, artists: 0, playlists: 0 }] = await this.db.query<
+      Record<keyof LibrarySummary, number>
+    >(`SELECT
       (SELECT COUNT(*) FROM tracks WHERE is_available = 1) AS tracks,
       (SELECT COUNT(DISTINCT album_id) FROM tracks WHERE is_available = 1 AND album_id IS NOT NULL) AS albums,
       (SELECT COUNT(DISTINCT ta.artist_id) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id WHERE t.is_available = 1) AS artists,
@@ -70,7 +78,9 @@ export class SqliteLibraryRepository implements LibraryRepository {
   }
 
   async listTracks(): Promise<Track[]> {
-    const rows = await this.db.query<TrackRow>(`${EFFECTIVE_TRACKS} ORDER BY title COLLATE NOCASE, t.id`);
+    const rows = await this.db.query<TrackRow>(
+      `${EFFECTIVE_TRACKS} ORDER BY title COLLATE NOCASE, t.id`,
+    );
     return this.hydrate(rows);
   }
 
@@ -98,7 +108,12 @@ export class SqliteLibraryRepository implements LibraryRepository {
   }
 
   async listArtists(): Promise<Artist[]> {
-    const rows = await this.db.query<{ id: string; name: string; album_count: number; track_count: number }>(
+    const rows = await this.db.query<{
+      id: string;
+      name: string;
+      album_count: number;
+      track_count: number;
+    }>(
       `SELECT ar.id, ar.name, COUNT(DISTINCT t.album_id) AS album_count, COUNT(DISTINCT t.id) AS track_count
       FROM artists ar
       JOIN track_artists ta ON ta.artist_id = ar.id
@@ -114,9 +129,12 @@ export class SqliteLibraryRepository implements LibraryRepository {
   }
 
   async listPlaylists(): Promise<Playlist[]> {
-    const lists = await this.db.query<{ id: string; name: string; created_at: number; updated_at: number }>(
-      "SELECT id, name, created_at, updated_at FROM playlists ORDER BY name COLLATE NOCASE, id",
-    );
+    const lists = await this.db.query<{
+      id: string;
+      name: string;
+      created_at: number;
+      updated_at: number;
+    }>("SELECT id, name, created_at, updated_at FROM playlists ORDER BY name COLLATE NOCASE, id");
     const items = await this.db.query<{ playlist_id: string; track_id: string }>(
       "SELECT playlist_id, track_id FROM playlist_tracks ORDER BY playlist_id, position",
     );
@@ -139,8 +157,12 @@ export class SqliteLibraryRepository implements LibraryRepository {
         [like, like],
       ),
     );
-    const albums = (await this.listAlbums()).filter((a) => a.title.toLowerCase().includes(q.toLowerCase()));
-    const artists = (await this.listArtists()).filter((a) => a.name.toLowerCase().includes(q.toLowerCase()));
+    const albums = (await this.listAlbums()).filter((a) =>
+      a.title.toLowerCase().includes(q.toLowerCase()),
+    );
+    const artists = (await this.listArtists()).filter((a) =>
+      a.name.toLowerCase().includes(q.toLowerCase()),
+    );
     return { tracks, albums, artists };
   }
 

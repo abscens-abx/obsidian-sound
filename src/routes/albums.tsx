@@ -12,7 +12,10 @@ export const Route = createFileRoute("/albums")({
       title="Albums"
       noun={["album", "albums"]}
       query={albumsQuery}
-      empty={{ title: "No albums", body: "Albums are grouped from the album and album-artist tags embedded in your files." }}
+      empty={{
+        title: "No albums",
+        body: "Albums are grouped from the album and album-artist tags embedded in your files.",
+      }}
       renderItem={(a) => (
         <div className="py-3">
           <p className="truncate text-sm text-platinum">{a.title}</p>

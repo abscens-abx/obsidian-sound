@@ -21,11 +21,13 @@ function NowPlaying() {
           {state.status === "idle" ? "Silence" : "Playing"}
         </h1>
         <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-          Nothing is playing. Start a song from your library and it will appear here with its artwork, progress and lyrics.
+          Nothing is playing. Start a song from your library and it will appear here with its
+          artwork, progress and lyrics.
         </p>
         {!available && (
           <p className="mt-8 border-l border-silver/40 pl-3 font-mono text-[0.6875rem] leading-relaxed text-muted-foreground">
-            Playback runs natively on Android through Media3, including background and lock-screen controls. The web preview cannot play audio.
+            Playback runs natively on Android through Media3, including background and lock-screen
+            controls. The web preview cannot play audio.
           </p>
         )}
         <section aria-labelledby="lyrics-h" className="mt-12 border-t border-hairline pt-6">
@@ -33,7 +35,8 @@ function NowPlaying() {
             Lyrics
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manual lyrics and LRC import are planned. Synced lyrics will only be shown when a file has real timestamps.
+            Manual lyrics and LRC import are planned. Synced lyrics will only be shown when a file
+            has real timestamps.
           </p>
         </section>
       </div>

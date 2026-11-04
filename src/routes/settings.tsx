@@ -11,7 +11,9 @@ export const Route = createFileRoute("/settings")({
 
 function Settings() {
   const info = useSyncExternalStore(subscribePlatform, getPlatformInfo, () => WEB_PREVIEW_INFO);
-  const runtimeLabel = { "web-preview": "Web preview", android: "Android", ios: "iOS" }[info.runtime];
+  const runtimeLabel = { "web-preview": "Web preview", android: "Android", ios: "iOS" }[
+    info.runtime
+  ];
   return (
     <>
       <PageHeader eyebrow="Preferences" title="Settings" meta={runtimeLabel} />
@@ -27,7 +29,13 @@ function Settings() {
                 <p className="text-sm text-platinum">{c.label}</p>
                 <p className="font-mono text-[0.6875rem] text-muted-foreground">{c.requires}</p>
               </div>
-              <span className={`eyebrow ${c.available ? "text-platinum" : ""}`}>{c.available ? "Available" : info.runtime === "web-preview" ? "Not in preview" : "Not built yet"}</span>
+              <span className={`eyebrow ${c.available ? "text-platinum" : ""}`}>
+                {c.available
+                  ? "Available"
+                  : info.runtime === "web-preview"
+                    ? "Not in preview"
+                    : "Not built yet"}
+              </span>
             </li>
           ))}
         </ul>
@@ -38,8 +46,8 @@ function Settings() {
           Privacy
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Your library lives on this device. There is no account, and audio files are never uploaded. Optional sync may come
-          later and will always be opt-in.
+          Your library lives on this device. There is no account, and audio files are never
+          uploaded. Optional sync may come later and will always be opt-in.
         </p>
       </section>
     </>

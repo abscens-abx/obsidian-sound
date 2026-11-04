@@ -27,12 +27,37 @@ export interface PlatformInfo {
 }
 
 const BASE: Capability[] = [
-  { key: "localDiscovery", label: "Scan device music", available: false, requires: "Android MediaStore" },
-  { key: "folderImport", label: "Import a folder", available: false, requires: "Storage Access Framework" },
+  {
+    key: "localDiscovery",
+    label: "Scan device music",
+    available: false,
+    requires: "Android MediaStore",
+  },
+  {
+    key: "folderImport",
+    label: "Import a folder",
+    available: false,
+    requires: "Storage Access Framework",
+  },
   { key: "playback", label: "Audio playback", available: false, requires: "Media3 / ExoPlayer" },
-  { key: "backgroundPlayback", label: "Background playback", available: false, requires: "MediaSessionService" },
-  { key: "mediaSession", label: "Lock screen & headset controls", available: false, requires: "MediaSession" },
-  { key: "offlineDatabase", label: "Offline library database", available: false, requires: "SQLite on device" },
+  {
+    key: "backgroundPlayback",
+    label: "Background playback",
+    available: false,
+    requires: "MediaSessionService",
+  },
+  {
+    key: "mediaSession",
+    label: "Lock screen & headset controls",
+    available: false,
+    requires: "MediaSession",
+  },
+  {
+    key: "offlineDatabase",
+    label: "Offline library database",
+    available: false,
+    requires: "SQLite on device",
+  },
 ];
 
 export const WEB_PREVIEW_INFO: PlatformInfo = { runtime: "web-preview", capabilities: BASE };
@@ -48,8 +73,11 @@ export function runtimeFromPlatform(platform: string | undefined, isNative: bool
 /** Safe in SSR and the browser: only reports native when Capacitor's native bridge is present. */
 export function detectRuntime(): Runtime {
   if (typeof window === "undefined") return "web-preview";
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string } })
-    .Capacitor;
+  const cap = (
+    window as unknown as {
+      Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string };
+    }
+  ).Capacitor;
   return runtimeFromPlatform(cap?.getPlatform?.(), Boolean(cap?.isNativePlatform?.()));
 }
 
@@ -72,7 +100,10 @@ export function setRuntime(runtime: Runtime) {
 
 /** Call only from the implementation of `key`, after it has succeeded. */
 export function markCapability(key: CapabilityKey, available: boolean) {
-  info = { ...info, capabilities: info.capabilities.map((c) => (c.key === key ? { ...c, available } : c)) };
+  info = {
+    ...info,
+    capabilities: info.capabilities.map((c) => (c.key === key ? { ...c, available } : c)),
+  };
   listeners.forEach((l) => l());
 }
 
