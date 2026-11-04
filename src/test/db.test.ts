@@ -33,7 +33,7 @@ function memoryDb(): SqlExecutor & { raw: DatabaseSync } {
 describe("migrations", () => {
   it("are numbered 1..n in order", () => {
     expect(() => validateMigrations(MIGRATIONS)).not.toThrow();
-    expect(() => validateMigrations([MIGRATIONS[0], { ...MIGRATIONS[0], version: 3 }])).toThrow(
+    expect(() => validateMigrations([MIGRATIONS[0]!, { ...MIGRATIONS[0]!, version: 3 }])).toThrow(
       MigrationError,
     );
   });
@@ -123,6 +123,7 @@ describe("SqliteLibraryRepository", () => {
     // Simulate a rescan refreshing embedded tags: manual values must survive.
     await db.run("UPDATE tracks SET title = 'rescanned title' WHERE id = 't1'");
     const [t] = await new SqliteLibraryRepository(db).listTracks();
+    if (!t) throw new Error("expected a track");
     expect(t.title).toBe("Corrected Title");
     expect(t.fieldSources.title).toBe("manual");
     expect(t.credits.map((c) => c.name)).toEqual(["Corrected Artist"]);
