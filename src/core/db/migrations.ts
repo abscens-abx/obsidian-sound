@@ -170,4 +170,29 @@ CREATE TABLE app_preferences (
 );
 `,
   },
+  {
+    version: 2,
+    name: "library_sources",
+    sql: `
+-- Where audio comes from. 'mediastore' is a single device-wide source;
+-- 'saf' rows hold an opaque persisted tree URI and its display name only.
+CREATE TABLE library_sources (
+  id TEXT PRIMARY KEY NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('mediastore', 'saf')),
+  tree_uri TEXT UNIQUE,
+  display_name TEXT NOT NULL,
+  last_scan_id TEXT,
+  last_scanned_at INTEGER,
+  last_scan_status TEXT CHECK (last_scan_status IS NULL OR last_scan_status IN ('completed', 'cancelled', 'failed')),
+  created_at INTEGER NOT NULL DEFAULT ${NOW},
+  CHECK ((kind = 'mediastore' AND tree_uri IS NULL) OR (kind = 'saf' AND tree_uri IS NOT NULL))
+);
+
+ALTER TABLE tracks ADD COLUMN source_id TEXT REFERENCES library_sources(id) ON DELETE SET NULL;
+-- 'embedded' when the title came from tags, 'filename' when derived from the file name.
+ALTER TABLE tracks ADD COLUMN title_source TEXT NOT NULL DEFAULT 'embedded' CHECK (title_source IN ('embedded', 'filename'));
+ALTER TABLE tracks ADD COLUMN last_seen_scan_id TEXT;
+CREATE INDEX idx_tracks_source ON tracks(source_id, last_seen_scan_id);
+`,
+  },
 ];

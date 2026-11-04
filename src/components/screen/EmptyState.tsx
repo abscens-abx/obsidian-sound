@@ -33,4 +33,4 @@ export function EmptyState({
 }
 
 export const NATIVE_IMPORT_NOTE =
-  "Adding music needs Android MediaStore scanning and the system folder picker. Neither is built yet, and neither can run in the web preview.";
+  "Add music from the Library screen in the Android app: scan device music or choose a folder. The web preview cannot read device files.";

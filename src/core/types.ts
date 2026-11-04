@@ -5,8 +5,11 @@
 
 export type Id = string;
 
-/** Where a field value came from. Manual edits must never be silently replaced. */
-export type FieldSource = "embedded" | "manual";
+/**
+ * Where a field value came from. Manual edits must never be silently replaced.
+ * 'filename' = title derived from the file name because no tag existed.
+ */
+export type FieldSource = "embedded" | "manual" | "filename";
 
 export interface ArtistCredit {
   artistId: Id;
@@ -91,3 +94,14 @@ export const IDLE_PLAYBACK: PlaybackState = {
   queue: [],
   error: null,
 };
+
+/** A place audio is discovered from. Only opaque content URIs are stored, never paths. */
+export interface LibrarySource {
+  id: Id;
+  kind: "mediastore" | "saf";
+  treeUri: string | null;
+  displayName: string;
+  lastScannedAt: string | null;
+  lastScanStatus: "completed" | "cancelled" | "failed" | null;
+  trackCount: number;
+}

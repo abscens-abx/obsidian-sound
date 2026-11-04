@@ -40,11 +40,11 @@ describe("migrations", () => {
 
   it("apply once and are idempotent on re-run", async () => {
     const db = memoryDb();
-    expect(await migrate(db)).toEqual([1]);
+    expect(await migrate(db)).toEqual([1, 2]);
     expect(await migrate(db)).toEqual([]);
     const rows = await db.query<{ version: number }>("SELECT version FROM schema_migrations");
-    expect(rows.map((r) => r.version)).toEqual([1]);
-    expect(SCHEMA_VERSION).toBe(1);
+    expect(rows.map((r) => r.version)).toEqual([1, 2]);
+    expect(SCHEMA_VERSION).toBe(2);
   });
 
   it("create every core table", async () => {
@@ -85,18 +85,18 @@ describe("migrations", () => {
     const db = memoryDb();
     const bad = [
       ...MIGRATIONS,
-      { version: 2, name: "bad", sql: "CREATE TABLE x (a); SELECT * FROM missing_table;" },
+      { version: 3, name: "bad", sql: "CREATE TABLE x (a); SELECT * FROM missing_table;" },
     ];
     await expect(migrate(db, bad)).rejects.toThrow();
     const rows = await db.query<{ version: number }>("SELECT version FROM schema_migrations");
-    expect(rows.map((r) => r.version)).toEqual([1]);
+    expect(rows.map((r) => r.version)).toEqual([1, 2]);
     expect(await db.query("SELECT name FROM sqlite_master WHERE name='x'")).toEqual([]);
   });
 
   it("refuse a database newer than the app", async () => {
     const db = memoryDb();
     await migrate(db);
-    await db.run("INSERT INTO schema_migrations VALUES (2, 'future', 0)");
+    await db.run("INSERT INTO schema_migrations VALUES (3, 'future', 0)");
     await expect(migrate(db)).rejects.toThrow(/newer/);
   });
 });

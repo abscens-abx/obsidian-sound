@@ -34,7 +34,9 @@ function Settings() {
                   ? "Available"
                   : info.runtime === "web-preview"
                     ? "Not in preview"
-                    : "Not built yet"}
+                    : c.implemented
+                      ? "Not yet run"
+                      : "Not built yet"}
               </span>
             </li>
           ))}
@@ -48,6 +50,9 @@ function Settings() {
         <p className="text-sm leading-relaxed text-muted-foreground">
           Your library lives on this device. There is no account, and audio files are never
           uploaded. Optional sync may come later and will always be opt-in.
+        </p>
+        <p className="mt-10 font-mono text-[0.6875rem] tracking-wide text-muted-foreground">
+          LAWLIET · A Nexora AI Systems product
         </p>
       </section>
     </>
