@@ -56,12 +56,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
       </header>
 
-      <main
-        id="main"
-        className="mx-auto max-w-5xl px-5 pb-[calc(var(--nav-height)+var(--mini-player-height)+2.5rem)] pt-8 md:ml-60 md:px-12 md:pb-[calc(var(--mini-player-height)+3rem)] md:pt-14 lg:mx-auto lg:pl-[calc(15rem+3rem)]"
-      >
-        {children}
-      </main>
+      <div className="md:pl-60">
+        <main
+          id="main"
+          className="mx-auto max-w-5xl px-5 pb-[calc(var(--nav-height)+var(--mini-player-height)+2.5rem)] pt-8 md:px-12 md:pb-[calc(var(--mini-player-height)+3rem)] md:pt-14"
+        >
+          {children}
+        </main>
+      </div>
 
       <div className="fixed inset-x-0 bottom-[var(--nav-height)] z-40 md:bottom-0 md:left-60">
         <MiniPlayer />
