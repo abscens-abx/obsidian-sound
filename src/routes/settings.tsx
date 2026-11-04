@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getPlatformInfo } from "@/core/platform/capabilities";
+import { useSyncExternalStore } from "react";
+import { getPlatformInfo, subscribePlatform, WEB_PREVIEW_INFO } from "@/core/platform/capabilities";
 import { PageHeader } from "@/components/screen/PageHeader";
 import { pageHead } from "@/lib/seo";
 
@@ -9,10 +10,11 @@ export const Route = createFileRoute("/settings")({
 });
 
 function Settings() {
-  const info = getPlatformInfo();
+  const info = useSyncExternalStore(subscribePlatform, getPlatformInfo, () => WEB_PREVIEW_INFO);
+  const runtimeLabel = { "web-preview": "Web preview", android: "Android", ios: "iOS" }[info.runtime];
   return (
     <>
-      <PageHeader eyebrow="Preferences" title="Settings" meta={info.runtime === "web-preview" ? "Web preview" : "Android"} />
+      <PageHeader eyebrow="Preferences" title="Settings" meta={runtimeLabel} />
 
       <section aria-labelledby="cap-h" className="mb-14">
         <h2 id="cap-h" className="eyebrow mb-4">
@@ -25,7 +27,7 @@ function Settings() {
                 <p className="text-sm text-platinum">{c.label}</p>
                 <p className="font-mono text-[0.6875rem] text-muted-foreground">{c.requires}</p>
               </div>
-              <span className={`eyebrow ${c.available ? "text-platinum" : ""}`}>{c.available ? "Available" : "Not in preview"}</span>
+              <span className={`eyebrow ${c.available ? "text-platinum" : ""}`}>{c.available ? "Available" : info.runtime === "web-preview" ? "Not in preview" : "Not built yet"}</span>
             </li>
           ))}
         </ul>
