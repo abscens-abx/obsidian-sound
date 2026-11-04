@@ -240,6 +240,15 @@ export class SqliteLibraryRepository implements LibraryRepository {
     }
   }
 
+  /** Marks existing rows as seen without changing metadata (item present but unreadable). */
+  async touchSeen(sourceId: string, scanId: string, uris: string[]): Promise<void> {
+    if (uris.length === 0) return;
+    await this.db.run(
+      `UPDATE tracks SET last_seen_scan_id = ? WHERE source_id = ? AND source_uri IN (${uris.map(() => "?").join(",")})`,
+      [scanId, sourceId, ...uris],
+    );
+  }
+
   /**
    * Records the scan outcome. Only a completed scan marks unseen tracks of
    * this source unavailable; rows are never deleted, so playlists, history and
@@ -249,10 +258,11 @@ export class SqliteLibraryRepository implements LibraryRepository {
     sourceId: string,
     scanId: string,
     status: "completed" | "cancelled" | "failed",
+    { markMissing = status === "completed" }: { markMissing?: boolean } = {},
   ): Promise<{ markedUnavailable: number }> {
     return inTransaction(this.db, async () => {
       let markedUnavailable = 0;
-      if (status === "completed") {
+      if (status === "completed" && markMissing) {
         const where =
           "source_id = ? AND is_available = 1 AND (last_seen_scan_id IS NULL OR last_seen_scan_id != ?)";
         const [row] = await this.db.query<{ n: number }>(

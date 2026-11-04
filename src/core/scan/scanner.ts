@@ -20,6 +20,7 @@ export interface ScanWriter {
     sourceId: string,
     scanId: string,
     status: "completed" | "cancelled" | "failed",
+    options?: { markMissing?: boolean },
   ): Promise<{ markedUnavailable: number }>;
 }
 
@@ -196,14 +197,9 @@ export async function scanFolder(
     result.message = errorMessage(e);
   }
   // A truncated listing is not a complete view, so never mark rows missing from it.
-  const finStatus =
-    result.status === "completed" && !truncated
-      ? "completed"
-      : result.status === "failed"
-        ? "failed"
-        : result.status === "cancelled"
-          ? "cancelled"
-          : "failed";
-  result.markedUnavailable = (await writer.finishScan(source.id, scanId, finStatus)).markedUnavailable;
+  const finStatus = result.status === "cancelled" ? "cancelled" : result.status === "failed" ? "failed" : "completed";
+  result.markedUnavailable = (
+    await writer.finishScan(source.id, scanId, finStatus, { markMissing: !truncated })
+  ).markedUnavailable;
   return result;
 }
