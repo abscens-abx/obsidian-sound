@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import { librarySummaryQuery } from "@/core/library/queries";
 import { PageHeader } from "@/components/screen/PageHeader";
+import { LibrarySources } from "@/components/screen/LibrarySources";
 import { libraryNav, utilityNav } from "@/components/shell/nav-items";
 import { pageHead } from "@/lib/seo";
 
@@ -43,6 +44,7 @@ function Library() {
           </li>
         ))}
       </ul>
+      <LibrarySources />
     </>
   );
 }
