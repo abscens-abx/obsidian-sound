@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Obsidian Sound</string>
-    <string name="title_activity_main">Obsidian Sound</string>
+    <string name="app_name">LAWLIET</string>
+    <string name="title_activity_main">LAWLIET</string>
     <string name="package_name">app.obsidiansound.player</string>
     <string name="custom_url_scheme">app.obsidiansound.player</string>
 </resources>
