@@ -2,7 +2,13 @@ import type { QueryClient } from "@tanstack/react-query";
 import { migrate } from "./db/migrate";
 import { SqliteLibraryRepository } from "./library/sqlite-repository";
 import { setLibraryRepository } from "./library/repository";
-import { detectRuntime, markCapability, markImplemented, isCapabilityAvailable, setRuntime } from "./platform/capabilities";
+import {
+  detectRuntime,
+  markCapability,
+  markImplemented,
+  isCapabilityAvailable,
+  setRuntime,
+} from "./platform/capabilities";
 
 let started: Promise<void> | null = null;
 

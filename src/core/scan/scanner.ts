@@ -1,5 +1,5 @@
 import type { LawlietLibraryPlugin } from "../native/library-plugin";
-import { normalizeAudioItem, type ScannedTrack } from "./normalize";
+import { normalizeAudioItem, normalizeSourceUri, type ScannedTrack } from "./normalize";
 
 /**
  * Scan orchestration, shared by MediaStore discovery and SAF folder import.
@@ -24,7 +24,8 @@ export interface ScanWriter {
   ): Promise<{ markedUnavailable: number }>;
 }
 
-export type ScanStatus = "completed" | "cancelled" | "failed" | "permission-denied" | "access-lost";
+export type ScanStatus =
+  "completed" | "cancelled" | "failed" | "permission-denied" | "access-lost" | "partial";
 
 export interface ScanResult {
   status: ScanStatus;
@@ -64,16 +65,21 @@ const empty = (status: ScanStatus, message: string | null = null): ScanResult =>
 
 export function errorMessage(e: unknown): string {
   if (e instanceof Error && e.message) return e.message;
-  if (typeof e === "object" && e && "message" in e) return String((e as { message: unknown }).message);
+  if (typeof e === "object" && e && "message" in e)
+    return String((e as { message: unknown }).message);
   return "Unknown error";
+}
+
+export function isAudioPermissionGranted(state: unknown): boolean {
+  return state === "granted";
 }
 
 /** Requests audio permission only when the user starts a scan. */
 export async function ensureAudioPermission(plugin: LawlietLibraryPlugin): Promise<boolean> {
   const { state } = await plugin.checkAudioPermission();
-  if (state === "granted") return true;
+  if (isAudioPermissionGranted(state)) return true;
   const after = await plugin.requestAudioPermission();
-  return after.state === "granted";
+  return isAudioPermissionGranted(after.state);
 }
 
 export async function scanMediaStore(
@@ -102,9 +108,32 @@ export async function scanMediaStore(
         break;
       }
       const page = await plugin.queryMediaStore({ afterId, limit: pageSize });
+      if (signal?.aborted) {
+        result.status = "cancelled";
+        break;
+      }
+      if (
+        !Number.isSafeInteger(page.lastId) ||
+        page.lastId < afterId ||
+        (page.items.length > 0 && page.lastId <= afterId) ||
+        (!page.done && page.items.length === 0)
+      ) {
+        throw new Error(
+          "MediaStore returned an incomplete or non-advancing page. Try scanning again.",
+        );
+      }
       result.found += page.items.length;
+      await writer.touchSeen(
+        sourceId,
+        scanId,
+        page.items.map((r) => normalizeSourceUri(r.uri)).filter((u): u is string => u !== null),
+      );
       const batch: ScannedTrack[] = [];
       for (const raw of page.items) {
+        if (raw.error) {
+          result.failed++;
+          continue;
+        }
         const t = normalizeAudioItem(raw, "mediastore");
         if (t) batch.push(t);
         else result.skipped++;
@@ -113,17 +142,26 @@ export async function scanMediaStore(
       result.added += w.added;
       result.updated += w.updated;
       onProgress?.({ phase: "reading", processed: result.found, total });
-      if (page.done || page.items.length === 0 || page.lastId <= afterId) break;
+      if (page.done) break;
       afterId = page.lastId;
     }
   } catch (e) {
     result.status = "failed";
     result.message = errorMessage(e);
   }
+  if (signal?.aborted) result.status = "cancelled";
+  if (result.status === "completed" && (result.failed || result.skipped)) {
+    result.status = "partial";
+    result.message = "Some audio metadata could not be read. Existing tracks were kept; try again.";
+  }
   const fin = await writer.finishScan(
     sourceId,
     scanId,
-    result.status === "completed" ? "completed" : result.status === "cancelled" ? "cancelled" : "failed",
+    result.status === "completed"
+      ? "completed"
+      : result.status === "cancelled"
+        ? "cancelled"
+        : "failed",
   );
   result.markedUnavailable = fin.markedUnavailable;
   return result;
@@ -152,6 +190,10 @@ export async function scanFolder(
   try {
     const listing = await plugin.listFolderAudio({ treeUri: source.treeUri });
     docs = listing.items;
+    if (signal?.aborted) {
+      await writer.finishScan(source.id, scanId, "cancelled");
+      return empty("cancelled");
+    }
     if (listing.truncated) {
       result.message = "This folder has more files than one import can handle; some were not read.";
     }
@@ -171,6 +213,21 @@ export async function scanFolder(
       onProgress?.({ phase: "reading", processed: i, total: docs.length });
       const uris = docs.slice(i, i + pageSize).map((d) => d.uri);
       const { items } = await plugin.readMetadata({ uris });
+      if (signal?.aborted) {
+        result.status = "cancelled";
+        break;
+      }
+      const received = new Set(items.map((i) => i.uri));
+      if (
+        received.size !== uris.length ||
+        items.length !== uris.length ||
+        uris.some((u) => !received.has(u))
+      ) {
+        throw new Error(
+          "The provider returned incomplete metadata. Existing tracks were kept; try again.",
+        );
+      }
+      await writer.touchSeen(source.id, scanId, uris);
       const batch: ScannedTrack[] = [];
       const unreadable: string[] = [];
       for (const raw of items) {
@@ -196,8 +253,19 @@ export async function scanFolder(
     result.status = "failed";
     result.message = errorMessage(e);
   }
-  // A truncated listing is not a complete view, so never mark rows missing from it.
-  const finStatus = result.status === "cancelled" ? "cancelled" : result.status === "failed" ? "failed" : "completed";
+  if (signal?.aborted) result.status = "cancelled";
+  if (result.status === "completed" && (truncated || result.failed || result.skipped)) {
+    result.status = "partial";
+    result.message ??=
+      "Some audio metadata could not be read. Existing tracks were kept; try again.";
+  }
+  // Partial scans are stored as failed, never as completed.
+  const finStatus =
+    result.status === "cancelled"
+      ? "cancelled"
+      : result.status !== "completed"
+        ? "failed"
+        : "completed";
   result.markedUnavailable = (
     await writer.finishScan(source.id, scanId, finStatus, { markMissing: !truncated })
   ).markedUnavailable;

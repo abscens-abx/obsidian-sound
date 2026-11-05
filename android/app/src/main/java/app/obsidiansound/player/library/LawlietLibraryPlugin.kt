@@ -219,7 +219,8 @@ class LawlietLibraryPlugin : Plugin() {
         var truncated = false
         val projection = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME,
             DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-        outer@ while (pending.isNotEmpty()) {
+        var bounded = false
+        while (pending.isNotEmpty() && !bounded) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException("Folder listing interrupted")
             val id = pending.removeFirst()
             if (!visited.add(id)) continue
@@ -231,7 +232,7 @@ class LawlietLibraryPlugin : Plugin() {
                 if (c.extras.getBoolean(DocumentsContract.EXTRA_LOADING, false)) truncated = true
                 while (c.moveToNext()) {
                     entries++
-                    if (entries > 50000 || items.length() >= 20000) { truncated = true; break@outer }
+                    if (entries > 50000 || items.length() >= 20000) { truncated = true; bounded = true; break }
                     val childId = c.text(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
                         ?: throw IllegalStateException("Missing document identity")
                     val mime = c.text(DocumentsContract.Document.COLUMN_MIME_TYPE)

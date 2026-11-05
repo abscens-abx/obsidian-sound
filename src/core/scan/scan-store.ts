@@ -2,7 +2,13 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { SqliteLibraryRepository } from "../library/sqlite-repository";
 import type { LawlietLibraryPlugin } from "../native/library-plugin";
 import { markCapability } from "../platform/capabilities";
-import { errorMessage, scanFolder, scanMediaStore, type ScanProgress, type ScanResult } from "./scanner";
+import {
+  errorMessage,
+  scanFolder,
+  scanMediaStore,
+  type ScanProgress,
+  type ScanResult,
+} from "./scanner";
 
 /**
  * App-wide scan state so progress survives navigation. Only configured on
@@ -83,6 +89,7 @@ export function startDeviceScan() {
   return run(job, async (d, signal) => {
     const r = await scanMediaStore(d.plugin, d.repo, { signal, onProgress: progress(job) });
     // Exercised end to end: permission granted and MediaStore read fully.
+    if (r.status === "permission-denied") markCapability("localDiscovery", false);
     if (r.status === "completed") markCapability("localDiscovery", true);
     return r;
   });
@@ -91,33 +98,32 @@ export function startDeviceScan() {
 /** Opens the system folder picker, saves the folder, then imports it. */
 export function importNewFolder() {
   if (!deps || state.phase === "running") return Promise.resolve();
-  const d = deps;
-  return (async () => {
-    let picked: Awaited<ReturnType<LawlietLibraryPlugin["pickFolder"]>>;
-    try {
-      picked = await d.plugin.pickFolder();
-    } catch (e) {
-      set({
-        phase: "done",
-        job: { kind: "folder", label: "Folder" },
-        result: {
-          status: "failed",
-          found: 0,
-          added: 0,
-          updated: 0,
-          skipped: 0,
-          failed: 0,
-          markedUnavailable: 0,
-          message: errorMessage(e),
-        },
-      });
-      return;
+  const job: ScanJob = { kind: "folder", label: "Folder" };
+  return run(job, async (d, signal) => {
+    const picked = await d.plugin.pickFolder();
+    if (picked.cancelled || !picked.treeUri || signal.aborted) {
+      return {
+        status: "cancelled",
+        found: 0,
+        added: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0,
+        markedUnavailable: 0,
+        message: null,
+      };
     }
-    if (picked.cancelled || !picked.treeUri) return;
     const label = picked.displayName || "Folder";
     const id = await d.repo.upsertFolderSource(picked.treeUri, label);
-    await rescanFolder({ id, treeUri: picked.treeUri, displayName: label });
-  })();
+    const r = await scanFolder(
+      d.plugin,
+      d.repo,
+      { id, treeUri: picked.treeUri },
+      { signal, onProgress: progress(job) },
+    );
+    if (r.status === "completed") markCapability("folderImport", true);
+    return r;
+  });
 }
 
 export function rescanFolder(source: { id: string; treeUri: string; displayName: string }) {
