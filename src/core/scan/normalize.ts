@@ -55,7 +55,10 @@ export function cleanText(value: unknown): string | null {
   if (typeof value !== "string") return null;
   // Strip control characters (incl. NULs some ID3 writers leave behind).
   // eslint-disable-next-line no-control-regex
-  const t = value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  const t = value
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!t || PLACEHOLDERS.has(t.toLowerCase())) return null;
   return t;
 }
@@ -100,7 +103,7 @@ export function parseYear(value: unknown): number | null {
 export function normalizeSourceUri(uri: unknown): string | null {
   if (typeof uri !== "string") return null;
   const t = uri.trim();
-  return /^content:\/\/[^/\s]+\/\S+$/.test(t) ? t : null;
+  return /^content:\/\/[^/\s?#]+\/[^\s?#]+$/.test(t) ? t : null;
 }
 
 export function titleFromFileName(name: unknown): string | null {
@@ -149,9 +152,12 @@ export function normalizeAudioItem(raw: RawAudioItem, kind: SourceKind): Scanned
     year: parseYear(raw.year),
     genre: cleanText(raw.genre),
     mimeType: cleanText(raw.mimeType)?.toLowerCase() ?? null,
-    sizeBytes: Number.isFinite(size) && size >= 0 && raw.sizeBytes != null ? Math.floor(size) : null,
+    sizeBytes:
+      Number.isFinite(size) && size >= 0 && raw.sizeBytes != null ? Math.floor(size) : null,
     modifiedAt:
-      Number.isFinite(modified) && modified > 0 && raw.modifiedMs != null ? Math.floor(modified) : null,
+      Number.isFinite(modified) && modified > 0 && raw.modifiedMs != null
+        ? Math.floor(modified)
+        : null,
     artworkRef: normalizeSourceUri(raw.artworkRef),
   };
 }

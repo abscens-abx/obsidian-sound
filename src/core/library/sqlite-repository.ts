@@ -107,7 +107,8 @@ export class SqliteLibraryRepository implements LibraryRepository {
       kind: r.kind,
       treeUri: r.tree_uri,
       displayName: r.display_name,
-      lastScannedAt: r.last_scanned_at == null ? null : new Date(Number(r.last_scanned_at)).toISOString(),
+      lastScannedAt:
+        r.last_scanned_at == null ? null : new Date(Number(r.last_scanned_at)).toISOString(),
       lastScanStatus: r.last_scan_status,
       trackCount: Number(r.track_count),
     }));
@@ -220,9 +221,10 @@ export class SqliteLibraryRepository implements LibraryRepository {
             added++;
           }
           // Refresh embedded credits only; manual credits are untouched.
-          await this.db.run("DELETE FROM track_artists WHERE track_id = ? AND source = 'embedded'", [
-            trackId,
-          ]);
+          await this.db.run(
+            "DELETE FROM track_artists WHERE track_id = ? AND source = 'embedded'",
+            [trackId],
+          );
           if (artistId) {
             await this.db.run(
               "INSERT INTO track_artists (track_id, artist_id, role, position, source) VALUES (?, ?, 'primary', 0, 'embedded')",
@@ -321,12 +323,10 @@ export class SqliteLibraryRepository implements LibraryRepository {
       this.albumIds.set(cacheKey, id);
     }
     if (year !== null) {
-      await this.db.run("UPDATE albums SET year = ?, updated_at = ? WHERE id = ? AND year IS NOT ?", [
-        year,
-        Date.now(),
-        id,
-        year,
-      ]);
+      await this.db.run(
+        "UPDATE albums SET year = ?, updated_at = ? WHERE id = ? AND year IS NOT ?",
+        [year, Date.now(), id, year],
+      );
     }
     return id;
   }
@@ -466,7 +466,11 @@ export class SqliteLibraryRepository implements LibraryRepository {
         year: r.year,
         genre: r.genre,
         fieldSources: {
-          title: r.title_manual ? "manual" : r.title_source === "filename" ? "filename" : "embedded",
+          title: r.title_manual
+            ? "manual"
+            : r.title_source === "filename"
+              ? "filename"
+              : "embedded",
           credits: manual.length > 0 ? "manual" : "embedded",
           albumTitle: r.album_manual ? "manual" : "embedded",
           year: r.year_manual ? "manual" : "embedded",

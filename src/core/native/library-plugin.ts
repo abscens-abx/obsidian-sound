@@ -30,7 +30,7 @@ export interface LawlietLibraryPlugin {
   queryMediaStore(options: {
     afterId: number;
     limit: number;
-  }): Promise<{ items: RawAudioItem[]; lastId: number; done: boolean }>;
+  }): Promise<{ items: MetadataResult[]; lastId: number; done: boolean }>;
   /** ACTION_OPEN_DOCUMENT_TREE; persists read permission on success. */
   pickFolder(): Promise<{ cancelled: boolean; treeUri?: string; displayName?: string }>;
   hasFolderAccess(options: { treeUri: string }): Promise<{ granted: boolean }>;

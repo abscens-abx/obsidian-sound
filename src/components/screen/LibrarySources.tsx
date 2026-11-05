@@ -13,6 +13,7 @@ import {
   startDeviceScan,
   subscribeScan,
 } from "@/core/scan/scan-store";
+import { Button } from "@/components/ui/button";
 import type { ScanResult } from "@/core/scan/scanner";
 
 const btn =
@@ -22,6 +23,7 @@ function summary(r: ScanResult): string {
   switch (r.status) {
     case "permission-denied":
       return "Music access was not granted. LAWLIET only reads audio files, and only when you ask it to.";
+    case "partial":
     case "access-lost":
     case "failed":
       return r.message ?? "The scan could not finish.";
@@ -29,16 +31,18 @@ function summary(r: ScanResult): string {
       return `Stopped. ${r.added} added, ${r.updated} refreshed before stopping.`;
     default:
       if (r.found === 0) return "Finished. No audio files were found.";
-      return [
-        `${r.found} found`,
-        `${r.added} added`,
-        `${r.updated} refreshed`,
-        r.markedUnavailable ? `${r.markedUnavailable} no longer present` : "",
-        r.failed ? `${r.failed} could not be read` : "",
-        r.skipped ? `${r.skipped} skipped` : "",
-      ]
-        .filter(Boolean)
-        .join(" · ") + (r.message ? `. ${r.message}` : "");
+      return (
+        [
+          `${r.found} found`,
+          `${r.added} added`,
+          `${r.updated} refreshed`,
+          r.markedUnavailable ? `${r.markedUnavailable} no longer present` : "",
+          r.failed ? `${r.failed} could not be read` : "",
+          r.skipped ? `${r.skipped} skipped` : "",
+        ]
+          .filter(Boolean)
+          .join(" · ") + (r.message ? `. ${r.message}` : "")
+      );
   }
 }
 
@@ -62,23 +66,37 @@ export function LibrarySources() {
       ) : (
         <>
           <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
-            Scanning asks for permission to read audio files on this device. Folder import uses
-            the system picker and reads only the folder you choose. Nothing is copied or uploaded.
+            Scanning asks for permission to read audio files on this device. Folder import uses the
+            system picker and reads only the folder you choose. Nothing is copied or uploaded.
           </p>
           <div className="flex flex-wrap gap-3">
-            <button type="button" className={btn} disabled={running} onClick={() => void startDeviceScan()}>
+            <Button
+              variant="outline"
+              type="button"
+              className={btn}
+              disabled={running}
+              onClick={() => void startDeviceScan()}
+            >
               Scan device music
-            </button>
-            <button type="button" className={btn} disabled={running} onClick={() => void importNewFolder()}>
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              className={btn}
+              disabled={running}
+              onClick={() => void importNewFolder()}
+            >
               Add a folder
-            </button>
+            </Button>
           </div>
 
           <div aria-live="polite" className="mt-6 min-h-6 text-sm">
             {state.phase === "running" && (
               <div className="flex flex-wrap items-center gap-4">
                 <span className="text-platinum">
-                  {state.job.kind === "device" ? "Scanning device music" : `Importing ${state.job.label}`}
+                  {state.job.kind === "device"
+                    ? "Scanning device music"
+                    : `Importing ${state.job.label}`}
                   {state.progress?.phase === "listing" && " — listing files"}
                 </span>
                 <span className="font-mono text-xs tabular-nums text-muted-foreground">
@@ -86,9 +104,9 @@ export function LibrarySources() {
                     ? `${state.progress.processed}${state.progress.total != null ? ` / ${state.progress.total}` : ""}`
                     : "…"}
                 </span>
-                <button type="button" className={btn} onClick={cancelScan}>
+                <Button variant="outline" type="button" className={btn} onClick={cancelScan}>
                   Cancel
-                </button>
+                </Button>
               </div>
             )}
             {state.phase === "done" && (
@@ -97,17 +115,32 @@ export function LibrarySources() {
                 <div className="flex flex-wrap gap-3">
                   {state.result.status === "permission-denied" && (
                     <>
-                      <button type="button" className={btn} onClick={() => void startDeviceScan()}>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className={btn}
+                        onClick={() => void startDeviceScan()}
+                      >
                         Try again
-                      </button>
-                      <button type="button" className={btn} onClick={() => void openAppSettings()}>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className={btn}
+                        onClick={() => void openAppSettings()}
+                      >
                         Open app settings
-                      </button>
+                      </Button>
                     </>
                   )}
-                  <button type="button" className={btn} onClick={dismissScanResult}>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className={btn}
+                    onClick={dismissScanResult}
+                  >
                     Dismiss
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -125,17 +158,24 @@ export function LibrarySources() {
                     </p>
                   </div>
                   {s.kind === "saf" && s.treeUri && (
-                    <button
+                    <Button
+                      variant="outline"
                       type="button"
                       className={btn}
                       disabled={running}
                       aria-label={`Rescan ${s.displayName}`}
                       onClick={() =>
-                        void rescanFolder({ id: s.id, treeUri: s.treeUri!, displayName: s.displayName })
+                        s.treeUri
+                          ? void rescanFolder({
+                              id: s.id,
+                              treeUri: s.treeUri,
+                              displayName: s.displayName,
+                            })
+                          : undefined
                       }
                     >
                       Rescan
-                    </button>
+                    </Button>
                   )}
                 </li>
               ))}
