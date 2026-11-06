@@ -25,7 +25,7 @@ function NowPlaying() {
         <div className="min-w-0">
           <div
             aria-hidden
-            className="listening-void mx-auto grid aspect-square w-full max-w-40 place-items-center sm:max-w-80"
+            className="listening-void mx-auto grid aspect-square w-full max-w-32 place-items-center sm:max-w-80"
           >
             <span className="display-title text-5xl text-silver">L</span>
           </div>

@@ -1,7 +1,7 @@
 # Current focus: listening-screen polish
-- [ ] Polish honest Now Playing and mini-player states without implementing playback.
-- [ ] Align Home, Library, Settings and shared navigation/accessibility.
-- [ ] Run tests, lint, automatic production build and desktop/mobile interaction checks.
+- [x] Polish honest Now Playing and mini-player states without implementing playback.
+- [x] Align Home, Library, Settings and shared navigation/accessibility.
+- [x] Run tests, lint, automatic production build and desktop/mobile interaction checks (existing scanner lint error and missing Capacitor assets reported).
 
 # M3 completion (deferred; outside this task)
 - [ ] Implement and register Android library plugin and audio permissions.
