@@ -5,7 +5,7 @@ import { EmptyState, NATIVE_IMPORT_NOTE } from "@/components/screen/EmptyState";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
-  head: () => pageHead("Home", "Your offline music library, played from your own files."),
+  head: () => pageHead("Home", "Browse your local music library in LAWLIET. No account or audio uploads."),
   loader: ({ context }) => context.queryClient.ensureQueryData(librarySummaryQuery),
   component: Home,
 });
@@ -24,7 +24,7 @@ function Home() {
           <span className="text-silver italic">kept close.</span>
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Plays the files on your device. No account, no connection, nothing uploaded.
+          Your local music collection. No account, nothing uploaded. Audio playback is not implemented yet.
         </p>
       </section>
 
@@ -39,7 +39,7 @@ function Home() {
             ["Artists", data.artists, "/artists"],
             ["Playlists", data.playlists, "/playlists"],
           ] as const
-        ).map(([label, n, to], i) => (
+        ).map(([label, n, to]) => (
           <li key={label}>
             <Link to={to} className="block bg-background px-5 py-5 transition-colors hover:bg-card">
               <span className="eyebrow block">{label}</span>

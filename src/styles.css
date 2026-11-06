@@ -107,7 +107,7 @@
 
   --shadow-art: 0 30px 60px -30px oklch(0 0 0 / 80%), 0 0 0 1px var(--hairline);
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --nav-height: 4rem;
+  --nav-height: calc(4rem + env(safe-area-inset-bottom, 0px));
   --mini-player-height: 3.75rem;
 }
 
@@ -149,23 +149,43 @@
 @utility display-title {
   font-family: var(--font-display);
   font-weight: 400;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 0.95;
 }
 
-/* Abstract placeholder for missing artwork: concentric silver rings, no image */
+/* Missing artwork is a geometric void, never a fabricated album image. */
 @utility art-void {
-  background:
-    radial-gradient(
-      circle at 50% 50%,
-      transparent 0 22%,
-      var(--hairline) 22.5% 23%,
-      transparent 23.5% 38%,
-      var(--hairline) 38.5% 39%,
-      transparent 39.5%
-    ),
-    var(--graphite);
-  box-shadow: var(--shadow-art);
+  position: relative;
+  background: var(--graphite);
+  border: 1px solid var(--hairline);
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 22%;
+    border: 1px solid var(--hairline);
+    border-radius: 50%;
+  }
+}
+
+/* Unframed listening placeholder; border geometry uses existing palette tokens. */
+@utility listening-void {
+  position: relative;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 12%;
+    border: 1px solid var(--hairline);
+    border-radius: 50%;
+  }
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 32%;
+    border-top: 1px solid var(--silver);
+    border-bottom: 1px solid var(--silver);
+  }
 }
 
 @utility rise-in {
