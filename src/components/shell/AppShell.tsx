@@ -9,8 +9,9 @@ function SideLink({ to, label, icon: Icon }: { to: string; label: string; icon: 
   return (
     <Link
       to={to}
-      activeOptions={{ exact: to === "/" }}
-      className="group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-platinum data-[status=active]:bg-graphite data-[status=active]:text-platinum"
+      activeOptions={{ exact: true }}
+      activeProps={{ "aria-current": "page" }}
+      className="group flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-platinum data-[status=active]:bg-graphite data-[status=active]:text-platinum"
     >
       <Icon className="size-4 shrink-0" strokeWidth={1.5} aria-hidden />
       {label}
@@ -29,13 +30,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
 
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-hairline bg-sidebar px-4 py-6 md:flex">
-        <Link to="/" className="mb-10 px-3">
+        <Link to="/" aria-label="LAWLIET home" className="mb-10 flex min-h-11 items-center px-3">
           <Wordmark />
         </Link>
         <nav aria-label="Primary" className="flex flex-col gap-1">
           {primaryNav.map((i) => (
             <SideLink key={i.to} {...i} />
           ))}
+          <SideLink {...mobileNav[2]} />
         </nav>
         <p className="eyebrow mb-2 mt-8 px-3">Library</p>
         <nav aria-label="Library" className="flex flex-col gap-1">
@@ -50,8 +52,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-hairline bg-background/90 px-5 backdrop-blur md:hidden">
-        <Link to="/">
+      <header className="sticky top-0 z-30 flex min-h-14 items-center border-b border-hairline bg-background px-5 pt-[env(safe-area-inset-top)] md:hidden">
+        <Link to="/" aria-label="LAWLIET home" className="flex min-h-11 items-center">
           <Wordmark />
         </Link>
       </header>
@@ -77,8 +79,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             key={to}
             to={to}
-            activeOptions={{ exact: to === "/" }}
-            className="flex flex-col items-center justify-center gap-1 text-[0.6875rem] tracking-wide text-muted-foreground data-[status=active]:text-platinum"
+            activeOptions={{ exact: to !== "/library" }}
+            activeProps={{ "aria-current": "page" }}
+            className="flex min-h-11 flex-col items-center justify-center gap-1 text-[0.6875rem] text-muted-foreground data-[status=active]:text-platinum"
           >
             <Icon className="size-5" strokeWidth={1.5} aria-hidden />
             {label}

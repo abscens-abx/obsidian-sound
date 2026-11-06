@@ -21,7 +21,7 @@ function Queue() {
       {queue.length === 0 && (
         <EmptyState
           title="Queue is empty"
-          body="Playing an album, playlist or song fills the queue. It is owned by the native player so it survives the app going to the background."
+          body="There are no queued tracks. Audio playback and queue controls are not implemented yet."
         />
       )}
     </>

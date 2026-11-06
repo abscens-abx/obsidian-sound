@@ -1,13 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { usePlaybackState } from "@/core/playback/usePlayback";
+import { ChevronRight } from "lucide-react";
+import { useListeningView } from "@/core/playback/useListeningView";
 
 /**
  * Persistent mini player. Shows real adapter state only. When idle it renders
  * no transport controls — there is nothing to control.
  */
 export function MiniPlayer() {
-  const state = usePlaybackState();
-  const idle = state.status === "idle" || !state.currentTrackId;
+  const { state, view } = useListeningView();
+  const idle = view !== "active";
 
   return (
     <Link
@@ -21,10 +22,14 @@ export function MiniPlayer() {
           {idle ? "Nothing playing" : "Now playing"}
         </span>
         <span className="block truncate text-xs text-muted-foreground">
-          {idle ? "Choose a track from your library" : state.status}
+          {view === "unavailable"
+            ? "Playback not implemented yet"
+            : idle
+              ? "No track selected"
+              : state.status}
         </span>
       </span>
-      <span className="eyebrow hidden sm:inline">Idle</span>
+      <ChevronRight className="size-4 shrink-0 text-silver" aria-hidden />
     </Link>
   );
 }

@@ -24,19 +24,21 @@ function Settings() {
         </h2>
         <ul className="divide-y divide-hairline border-y border-hairline">
           {info.capabilities.map((c) => (
-            <li key={c.key} className="flex items-center justify-between gap-4 py-4">
-              <div>
+            <li key={c.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-4">
+              <div className="min-w-0">
                 <p className="text-sm text-platinum">{c.label}</p>
                 <p className="font-mono text-[0.6875rem] text-muted-foreground">{c.requires}</p>
               </div>
-              <span className={`eyebrow ${c.available ? "text-platinum" : ""}`}>
+              <span
+                className={`shrink-0 text-right font-mono text-[0.6875rem] text-muted-foreground ${c.available ? "text-platinum" : ""}`}
+              >
                 {c.available
                   ? "Available"
-                  : info.runtime === "web-preview"
-                    ? "Not in preview"
-                    : c.implemented
-                      ? "Not yet run"
-                      : "Not built yet"}
+                  : !c.implemented
+                    ? "Not built yet"
+                    : info.runtime === "web-preview"
+                      ? "Not in preview"
+                      : "Not yet run"}
               </span>
             </li>
           ))}
@@ -49,7 +51,7 @@ function Settings() {
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           Your library lives on this device. There is no account, and audio files are never
-          uploaded. Optional sync may come later and will always be opt-in.
+          uploaded. LAWLIET is currently local-only; cloud sync is not available.
         </p>
         <p className="mt-10 font-mono text-[0.6875rem] tracking-wide text-muted-foreground">
           LAWLIET · A Nexora AI Systems product

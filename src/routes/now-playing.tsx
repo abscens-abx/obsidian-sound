@@ -1,45 +1,75 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { usePlaybackState } from "@/core/playback/usePlayback";
-import { getPlaybackAdapter } from "@/core/playback/adapter";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowUpRight } from "lucide-react";
+import { useListeningView } from "@/core/playback/useListeningView";
+import { PageHeader } from "@/components/screen/PageHeader";
+import { Button } from "@/components/ui/button";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/now-playing")({
-  head: () => pageHead("Now Playing", "The track currently playing on your device."),
+  head: () =>
+    pageHead(
+      "Now Playing",
+      "Your listening state. Audio playback and lyrics are not implemented yet.",
+    ),
   component: NowPlaying,
 });
 
 function NowPlaying() {
-  const state = usePlaybackState();
-  const available = getPlaybackAdapter().available;
+  const { state, view } = useListeningView();
+  const active = view === "active";
 
   return (
-    <div className="rise-in grid gap-10 md:grid-cols-[minmax(0,22rem)_1fr] md:items-end md:gap-14">
-      <div aria-hidden className="art-void aspect-square w-full max-w-sm rounded-md" />
-      <div>
-        <p className="eyebrow mb-3">Now playing</p>
-        <h1 className="display-title text-5xl text-platinum md:text-6xl">
-          {state.status === "idle" ? "Silence" : "Playing"}
-        </h1>
-        <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-          Nothing is playing. Start a song from your library and it will appear here with its
-          artwork, progress and lyrics.
-        </p>
-        {!available && (
-          <p className="mt-8 border-l border-silver/40 pl-3 font-mono text-[0.6875rem] leading-relaxed text-muted-foreground">
-            Playback runs natively on Android through Media3, including background and lock-screen
-            controls. The web preview cannot play audio.
+    <>
+      <PageHeader eyebrow="Listening" title="Now Playing" />
+      <section className="rise-in grid gap-6 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] sm:items-center sm:gap-8 md:gap-12">
+        <div className="min-w-0">
+          <div
+            aria-hidden
+            className="listening-void mx-auto grid aspect-square w-full max-w-32 place-items-center sm:max-w-80"
+          >
+            <span className="display-title text-5xl text-silver">L</span>
+          </div>
+          <p className="mt-5 text-center font-mono text-[0.6875rem] text-muted-foreground">
+            {active ? "Artwork unavailable" : "No track selected"}
           </p>
-        )}
-        <section aria-labelledby="lyrics-h" className="mt-12 border-t border-hairline pt-6">
-          <h2 id="lyrics-h" className="eyebrow mb-2">
-            Lyrics
+        </div>
+        <div className="min-w-0">
+          <h2 className="display-title text-4xl text-platinum md:text-5xl">
+            {active ? "Listening state" : "A quiet moment."}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Manual lyrics and LRC import are planned. Synced lyrics will only be shown when a file
-            has real timestamps.
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
+            {view === "unavailable"
+              ? "Nothing is playing. Audio playback is not implemented yet. Your local library is still here to browse."
+              : active
+                ? `Playback status: ${state.status}. Track details are unavailable.`
+                : "Nothing is playing. Browse your local library."}
           </p>
-        </section>
-      </div>
-    </div>
+          {active && state.error && (
+            <p role="alert" className="mt-4 text-sm text-destructive">
+              {state.error}
+            </p>
+          )}
+          <Button asChild variant="outline" className="mt-6 min-h-11 px-5">
+            <Link to="/library">
+              Browse Library <ArrowUpRight aria-hidden />
+            </Link>
+          </Button>
+        </div>
+      </section>
+      <section
+        aria-labelledby="lyrics-h"
+        className="mt-10 grid gap-3 border-t border-hairline pt-6 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] md:mt-12 md:gap-12"
+      >
+        <h2 id="lyrics-h" className="eyebrow">
+          Lyrics
+        </h2>
+        <div className="min-w-0">
+          <p className="text-sm text-platinum">Planned · not available</p>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+            Lyrics entry, import and synchronized display are not implemented yet.
+          </p>
+        </div>
+      </section>
+    </>
   );
 }

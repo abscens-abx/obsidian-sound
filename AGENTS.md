@@ -17,3 +17,4 @@
 - Schema changes are new append-only migrations in `src/core/db/migrations.ts`; never edit a shipped one — devices already applied it.
 - Manual metadata edits go to `track_field_overrides` / `track_artists.source='manual'`; scanners write only embedded columns, so user corrections survive rescans.
 - Native plugins are loaded only via dynamic import after runtime detection, so web/SSR never evaluates them; run `npm run cap:sync` after web changes for the Android app.
+- Now Playing and MiniPlayer share the listening-view gate: both adapter availability and successful playback capability are required, so stale state cannot advertise unimplemented playback.
