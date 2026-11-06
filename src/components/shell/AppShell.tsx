@@ -37,6 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {primaryNav.map((i) => (
             <SideLink key={i.to} {...i} />
           ))}
+          <SideLink {...mobileNav[2]} />
         </nav>
         <p className="eyebrow mb-2 mt-8 px-3">Library</p>
         <nav aria-label="Library" className="flex flex-col gap-1">

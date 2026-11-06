@@ -21,11 +21,11 @@ function NowPlaying() {
   return (
     <>
       <PageHeader eyebrow="Listening" title="Now Playing" />
-      <section className="rise-in grid gap-8 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] sm:items-center md:gap-12">
+      <section className="rise-in grid gap-6 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] sm:items-center sm:gap-8 md:gap-12">
         <div className="min-w-0">
           <div
             aria-hidden
-            className="listening-void mx-auto grid aspect-square w-full max-w-56 place-items-center sm:max-w-80"
+            className="listening-void mx-auto grid aspect-square w-full max-w-40 place-items-center sm:max-w-80"
           >
             <span className="display-title text-5xl text-silver">L</span>
           </div>

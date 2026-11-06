@@ -34,11 +34,11 @@ function Settings() {
               >
                 {c.available
                   ? "Available"
-                  : info.runtime === "web-preview"
-                    ? "Not in preview"
-                    : c.implemented
-                      ? "Not yet run"
-                      : "Not built yet"}
+                  : !c.implemented
+                    ? "Not built yet"
+                    : info.runtime === "web-preview"
+                      ? "Not in preview"
+                      : "Not yet run"}
               </span>
             </li>
           ))}

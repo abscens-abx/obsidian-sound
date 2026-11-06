@@ -42,7 +42,7 @@ function SearchPage() {
       </form>
       <p aria-live="polite" className="text-sm text-muted-foreground">
         {deferred.length === 0
-          ? "Search runs entirely on this device. Nothing leaves it."
+          ? "Search your available local library by song, album or artist."
           : isFetching
             ? "Searching…"
             : total === 0
