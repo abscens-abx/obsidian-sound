@@ -29,7 +29,9 @@ function Settings() {
                 <p className="text-sm text-platinum">{c.label}</p>
                 <p className="font-mono text-[0.6875rem] text-muted-foreground">{c.requires}</p>
               </div>
-              <span className={`shrink-0 text-right font-mono text-[0.6875rem] text-muted-foreground ${c.available ? "text-platinum" : ""}`}>
+              <span
+                className={`shrink-0 text-right font-mono text-[0.6875rem] text-muted-foreground ${c.available ? "text-platinum" : ""}`}
+              >
                 {c.available
                   ? "Available"
                   : info.runtime === "web-preview"

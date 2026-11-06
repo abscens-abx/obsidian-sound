@@ -22,7 +22,11 @@ export function MiniPlayer() {
           {idle ? "Nothing playing" : "Now playing"}
         </span>
         <span className="block truncate text-xs text-muted-foreground">
-            {view === "unavailable" ? "Playback not implemented yet" : idle ? "No track selected" : state.status}
+          {view === "unavailable"
+            ? "Playback not implemented yet"
+            : idle
+              ? "No track selected"
+              : state.status}
         </span>
       </span>
       <ChevronRight className="size-4 shrink-0 text-silver" aria-hidden />

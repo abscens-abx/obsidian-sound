@@ -5,7 +5,8 @@ import { EmptyState, NATIVE_IMPORT_NOTE } from "@/components/screen/EmptyState";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
-  head: () => pageHead("Home", "Browse your local music library in LAWLIET. No account or audio uploads."),
+  head: () =>
+    pageHead("Home", "Browse your local music library in LAWLIET. No account or audio uploads."),
   loader: ({ context }) => context.queryClient.ensureQueryData(librarySummaryQuery),
   component: Home,
 });
@@ -24,7 +25,8 @@ function Home() {
           <span className="text-silver italic">kept close.</span>
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Your local music collection. No account, nothing uploaded. Audio playback is not implemented yet.
+          Your local music collection. No account, nothing uploaded. Audio playback is not
+          implemented yet.
         </p>
       </section>
 
