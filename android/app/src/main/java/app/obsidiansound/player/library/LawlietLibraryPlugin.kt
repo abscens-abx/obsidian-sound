@@ -8,6 +8,8 @@ import android.database.Cursor
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.os.CancellationSignal
+import android.os.OperationCanceledException
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
@@ -26,6 +28,8 @@ import com.getcapacitor.annotation.PermissionCallback
 import org.json.JSONObject
 import java.util.ArrayDeque
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 @CapacitorPlugin(
     name = "LawlietLibrary",
@@ -36,6 +40,9 @@ import java.util.concurrent.Executors
 )
 class LawlietLibraryPlugin : Plugin() {
     private val worker = Executors.newSingleThreadExecutor()
+    private val generation = AtomicLong(0)
+    private val activeSignal = AtomicReference<CancellationSignal?>()
+    private val workGeneration = ThreadLocal<Long>()
     private val audioUri: Uri get() = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 
     private fun obj(vararg fields: Pair<String, Any?>): JSObject = JSObject().apply {
@@ -43,18 +50,53 @@ class LawlietLibraryPlugin : Plugin() {
     }
 
     private fun background(call: PluginCall, work: () -> JSObject) {
+        val expected = generation.get()
         worker.execute {
             try {
+                workGeneration.set(expected)
+                checkCancelled()
                 call.resolve(work())
+            } catch (e: OperationCanceledException) {
+                call.reject("Scan cancelled.", "CANCELLED", e)
             } catch (e: SecurityException) {
                 call.reject("Read access was denied or revoked. Choose the folder again or grant music access.", "ACCESS_DENIED", e)
             } catch (e: Exception) {
                 call.reject("The audio provider could not complete this operation. ${e.message ?: "Try again."}", "PROVIDER_ERROR", e)
+            } finally {
+                workGeneration.remove()
             }
         }
     }
 
+    private fun checkCancelled() {
+        if (Thread.currentThread().isInterrupted || workGeneration.get() != generation.get()) {
+            throw OperationCanceledException("Scan cancelled")
+        }
+    }
+
+    private fun query(uri: Uri, projection: Array<String>, selection: String? = null,
+        args: Array<String>? = null, order: String? = null): Cursor? {
+        val signal = CancellationSignal()
+        activeSignal.set(signal)
+        try {
+            checkCancelled()
+            return context.contentResolver.query(uri, projection, selection, args, order, signal)
+        } finally {
+            activeSignal.compareAndSet(signal, null)
+        }
+    }
+
+    @PluginMethod
+    fun cancelScan(call: PluginCall) {
+        // Runs on the bridge thread, not behind a blocked provider on the worker.
+        generation.incrementAndGet()
+        activeSignal.get()?.cancel()
+        call.resolve()
+    }
+
     override fun handleOnDestroy() {
+        generation.incrementAndGet()
+        activeSignal.get()?.cancel()
         worker.shutdownNow()
         super.handleOnDestroy()
     }
@@ -103,7 +145,7 @@ class LawlietLibraryPlugin : Plugin() {
     @PluginMethod
     fun countMediaStore(call: PluginCall) = background(call) {
         requireAudioAccess()
-        val cursor = context.contentResolver.query(audioUri, arrayOf(MediaStore.Audio.Media._ID),
+        val cursor = query(audioUri, arrayOf(MediaStore.Audio.Media._ID),
             "${MediaStore.Audio.Media.IS_MUSIC} != 0", null, null)
             ?: throw IllegalStateException("MediaStore did not return a cursor")
         cursor.use { obj("count" to it.count) }
@@ -112,8 +154,7 @@ class LawlietLibraryPlugin : Plugin() {
     @PluginMethod
     fun queryMediaStore(call: PluginCall) = background(call) {
         requireAudioAccess()
-        val after = call.getLong("afterId") ?: 0L
-        require(after >= 0) { "Invalid MediaStore cursor" }
+        val after = LibraryRules.cursor(call.data.opt("afterId").takeUnless { it == JSONObject.NULL })
         val limit = LibraryRules.pageSize(call.getInt("limit") ?: 250)
         val projection = arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.DISPLAY_NAME,
             MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM,
@@ -121,7 +162,7 @@ class LawlietLibraryPlugin : Plugin() {
             MediaStore.Audio.Media.YEAR, MediaStore.Audio.Media.MIME_TYPE, MediaStore.Audio.Media.SIZE,
             MediaStore.Audio.Media.DATE_MODIFIED)
         // Keyset pagination, never offsets or filesystem paths. Read one extra row for exhaustion.
-        val cursor = context.contentResolver.query(audioUri, projection,
+        val cursor = query(audioUri, projection,
             "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media._ID} > ?",
             arrayOf(after.toString()), "${MediaStore.Audio.Media._ID} ASC")
             ?: throw IllegalStateException("MediaStore did not return a cursor")
@@ -131,20 +172,23 @@ class LawlietLibraryPlugin : Plugin() {
         cursor.use { c ->
             while (c.moveToNext()) {
                 if (items.length() >= limit) { done = false; break }
-                if (Thread.currentThread().isInterrupted) throw InterruptedException("Scan interrupted")
+                checkCancelled()
                 val id = c.number(MediaStore.Audio.Media._ID) ?: throw IllegalStateException("Missing audio identity")
                 check(id > last) { "MediaStore returned an unordered page" }
                 last = id
+                val (track, disc) = LibraryRules.trackParts(c.number(MediaStore.Audio.Media.TRACK))
                 val uri = ContentUris.withAppendedId(audioUri, id)
                 val item = obj("uri" to uri.toString(), "mediaStoreId" to id,
                     "displayName" to c.text(MediaStore.Audio.Media.DISPLAY_NAME),
                     "title" to c.text(MediaStore.Audio.Media.TITLE), "artist" to c.text(MediaStore.Audio.Media.ARTIST),
-                    "album" to c.text(MediaStore.Audio.Media.ALBUM), "track" to c.number(MediaStore.Audio.Media.TRACK),
+                    "album" to c.text(MediaStore.Audio.Media.ALBUM), "track" to track, "disc" to disc,
                     "durationMs" to c.number(MediaStore.Audio.Media.DURATION), "year" to c.number(MediaStore.Audio.Media.YEAR),
                     "mimeType" to c.text(MediaStore.Audio.Media.MIME_TYPE), "sizeBytes" to c.number(MediaStore.Audio.Media.SIZE),
                     "modifiedMs" to c.number(MediaStore.Audio.Media.DATE_MODIFIED)?.times(1000))
                 // Read embedded tags. Per-document errors do not abort the page, but TS treats it as partial.
-                try { readTags(uri, item) } catch (e: Exception) { item.put("error", e.message ?: "Metadata could not be read") }
+                try { readTags(uri, item) }
+                catch (e: OperationCanceledException) { throw e }
+                catch (e: Exception) { item.put("error", e.message ?: "Metadata could not be read") }
                 items.put(item)
             }
         }
@@ -176,7 +220,7 @@ class LawlietLibraryPlugin : Plugin() {
             context.contentResolver.takePersistableUriPermission(uri, flags)
             check(hasAccess(uri)) { "Read access to this folder could not be saved" }
             val root = DocumentsContract.buildDocumentUriUsingTree(uri, DocumentsContract.getTreeDocumentId(uri))
-            val name = context.contentResolver.query(root, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)
+            val name = query(root, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME))
                 ?.use { if (it.moveToFirst()) it.text(DocumentsContract.Document.COLUMN_DISPLAY_NAME) else null }
             obj("cancelled" to false, "treeUri" to uri.toString(), "displayName" to (name ?: "Folder"))
         }
@@ -202,7 +246,7 @@ class LawlietLibraryPlugin : Plugin() {
         val uri = treeUri(call)
         if (!hasAccess(uri)) return@background obj("granted" to false)
         val root = DocumentsContract.buildDocumentUriUsingTree(uri, DocumentsContract.getTreeDocumentId(uri))
-        val readable = context.contentResolver.query(root, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID), null, null, null)
+        val readable = query(root, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID))
             ?.use { it.moveToFirst() } ?: false
         obj("granted" to readable)
     }
@@ -214,6 +258,7 @@ class LawlietLibraryPlugin : Plugin() {
         val pending = ArrayDeque<String>()
         pending.add(DocumentsContract.getTreeDocumentId(tree))
         val visited = HashSet<String>()
+        val seenAudio = HashSet<String>()
         val items = JSArray()
         var entries = 0
         var truncated = false
@@ -221,16 +266,17 @@ class LawlietLibraryPlugin : Plugin() {
             DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED)
         var bounded = false
         while (pending.isNotEmpty() && !bounded) {
-            if (Thread.currentThread().isInterrupted) throw InterruptedException("Folder listing interrupted")
+            checkCancelled()
             val id = pending.removeFirst()
             if (!visited.add(id)) continue
             val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, id)
-            val cursor = context.contentResolver.query(children, projection, null, null, null)
+            val cursor = query(children, projection)
                 ?: throw IllegalStateException("The folder provider did not return its contents")
             cursor.use { c ->
                 // Loading flag means the provider returned only a partial listing.
                 if (c.extras.getBoolean(DocumentsContract.EXTRA_LOADING, false)) truncated = true
                 while (c.moveToNext()) {
+                    checkCancelled()
                     entries++
                     if (entries > 50000 || items.length() >= 20000) { truncated = true; bounded = true; break }
                     val childId = c.text(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
@@ -239,6 +285,7 @@ class LawlietLibraryPlugin : Plugin() {
                     val name = c.text(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
                     if (mime == DocumentsContract.Document.MIME_TYPE_DIR) pending.add(childId)
                     else if (LibraryRules.isAudio(mime, name)) {
+                        if (!seenAudio.add(childId)) continue
                         val uri = DocumentsContract.buildDocumentUriUsingTree(tree, childId)
                         items.put(obj("uri" to uri.toString(), "displayName" to name, "mimeType" to mime,
                             "sizeBytes" to c.number(DocumentsContract.Document.COLUMN_SIZE),
@@ -256,11 +303,12 @@ class LawlietLibraryPlugin : Plugin() {
         require(uris.length() <= 500) { "Metadata batches are limited to 500 documents" }
         val items = JSArray()
         for (i in 0 until uris.length()) {
+            checkCancelled()
             val value = uris.getString(i)
             val item = obj("uri" to value)
             try {
                 val uri = contentUri(value)
-                val cursor = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)
+                val cursor = query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE))
                     ?: throw IllegalStateException("The provider could not read this document")
                 cursor.use { c ->
                     check(c.moveToFirst()) { "The document is no longer present" }
@@ -269,16 +317,19 @@ class LawlietLibraryPlugin : Plugin() {
                 }
                 item.put("mimeType", context.contentResolver.getType(uri) ?: JSONObject.NULL)
                 readTags(uri, item)
-            } catch (e: Exception) { item.put("error", e.message ?: "Audio metadata could not be read") }
+            } catch (e: OperationCanceledException) { throw e }
+            catch (e: Exception) { item.put("error", e.message ?: "Audio metadata could not be read") }
             items.put(item)
         }
         obj("items" to items)
     }
 
     private fun readTags(uri: Uri, item: JSObject) {
+        checkCancelled()
         val reader = MediaMetadataRetriever()
         try {
             reader.setDataSource(context, uri)
+            checkCancelled()
             val tags = mapOf("title" to MediaMetadataRetriever.METADATA_KEY_TITLE,
                 "artist" to MediaMetadataRetriever.METADATA_KEY_ARTIST, "albumArtist" to MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST,
                 "album" to MediaMetadataRetriever.METADATA_KEY_ALBUM, "track" to MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER,

@@ -87,7 +87,10 @@ export async function scanMediaStore(
   writer: ScanWriter,
   { signal, onProgress, pageSize = 250 }: ScanOptions = {},
 ): Promise<ScanResult> {
+  pageSize = boundedPageSize(pageSize, 250);
+  if (signal?.aborted) return empty("cancelled");
   if (!(await ensureAudioPermission(plugin))) return empty("permission-denied");
+  if (signal?.aborted) return empty("cancelled");
 
   const sourceId = await writer.ensureMediaStoreSource();
   const scanId = writer.beginScan();
@@ -173,6 +176,8 @@ export async function scanFolder(
   source: { id: string; treeUri: string },
   { signal, onProgress, pageSize = 25 }: ScanOptions = {},
 ): Promise<ScanResult> {
+  pageSize = boundedPageSize(pageSize, 25);
+  if (signal?.aborted) return empty("cancelled");
   const access = await plugin.hasFolderAccess({ treeUri: source.treeUri }).catch(() => ({
     granted: false,
   }));
@@ -186,16 +191,22 @@ export async function scanFolder(
   const result = empty("completed");
   onProgress?.({ phase: "listing", processed: 0, total: null });
 
-  let docs: { uri: string }[];
+  let docs: Awaited<ReturnType<LawlietLibraryPlugin["listFolderAudio"]>>["items"];
   try {
     const listing = await plugin.listFolderAudio({ treeUri: source.treeUri });
-    docs = listing.items;
+    docs = [...new Map(listing.items.map((d) => [d.uri, d])).values()];
+    if (docs.some((d) => normalizeSourceUri(d.uri) !== d.uri)) {
+      throw new Error(
+        "The provider returned an invalid document reference. Existing tracks were kept.",
+      );
+    }
     if (signal?.aborted) {
       await writer.finishScan(source.id, scanId, "cancelled");
       return empty("cancelled");
     }
     if (listing.truncated) {
-      result.message = "This folder has more files than one import can handle; some were not read.";
+      result.message =
+        "The provider returned an incomplete listing or the import limit was reached. Existing tracks were kept; try again.";
     }
   } catch (e) {
     await writer.finishScan(source.id, scanId, "failed");
@@ -236,7 +247,11 @@ export async function scanFolder(
           unreadable.push(raw.uri);
           continue;
         }
-        const t = normalizeAudioItem(raw, "saf");
+        const document = docs.slice(i, i + pageSize).find((d) => d.uri === raw.uri);
+        const t = normalizeAudioItem(
+          { ...document, ...raw, modifiedMs: raw.modifiedMs ?? document?.modifiedMs ?? null },
+          "saf",
+        );
         if (t) batch.push(t);
         else result.skipped++;
       }
@@ -270,4 +285,8 @@ export async function scanFolder(
     await writer.finishScan(source.id, scanId, finStatus, { markMissing: !truncated })
   ).markedUnavailable;
   return result;
+}
+
+function boundedPageSize(value: number, fallback: number): number {
+  return Number.isFinite(value) ? Math.max(1, Math.min(500, Math.floor(value))) : fallback;
 }

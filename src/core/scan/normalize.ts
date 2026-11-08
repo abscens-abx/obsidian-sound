@@ -54,8 +54,8 @@ const PLACEHOLDERS = new Set(["<unknown>", "unknown", "unknown artist", "unknown
 export function cleanText(value: unknown): string | null {
   if (typeof value !== "string") return null;
   // Strip control characters (incl. NULs some ID3 writers leave behind).
-  // eslint-disable-next-line no-control-regex
   const t = value
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, " ")
     .replace(/\s+/g, " ")
     .trim();

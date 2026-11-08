@@ -202,10 +202,11 @@ export class SqliteLibraryRepository implements LibraryRepository {
             await this.db.run(
               `UPDATE tracks SET source_kind = ?, mediastore_id = ?, mime_type = ?, size_bytes = ?,
                 source_modified_at = ?, title = ?, title_source = ?, album_id = ?, track_number = ?,
-                disc_number = ?, duration_ms = ?, year = ?, genre = ?, artwork_ref = ?, source_id = ?,
-                last_seen_scan_id = ?, updated_at = ?, is_available = 1
+                disc_number = ?, duration_ms = ?, year = ?, genre = ?, artwork_ref = ?,
+                last_seen_scan_id = CASE WHEN source_id IS NULL OR source_id = ? THEN ? ELSE last_seen_scan_id END,
+                source_id = COALESCE(source_id, ?), updated_at = ?, is_available = 1
                WHERE id = ?`,
-              [...embedded, trackId],
+              [...embedded.slice(0, 14), sourceId, scanId, sourceId, now, trackId],
             );
             updated++;
           } else {
