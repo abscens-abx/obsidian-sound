@@ -25,6 +25,8 @@ export interface LawlietLibraryPlugin {
   checkAudioPermission(): Promise<{ state: AudioPermissionState }>;
   requestAudioPermission(): Promise<{ state: AudioPermissionState }>;
   openAppSettings(): Promise<void>;
+  /** Interrupt current/queued provider work; does not roll back committed batches. */
+  cancelScan(): Promise<void>;
   countMediaStore(): Promise<{ count: number }>;
   /** Keyset page over MediaStore.Audio (IS_MUSIC), ordered by _ID. */
   queryMediaStore(options: {

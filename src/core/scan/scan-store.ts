@@ -137,12 +137,21 @@ export function rescanFolder(source: { id: string; treeUri: string; displayName:
 
 export function cancelScan() {
   controller?.abort();
+  void deps?.plugin.cancelScan().catch(() => {
+    // JS cancellation still prevents writes/finalisation as a complete scan.
+  });
 }
 
 export function dismissScanResult() {
   if (state.phase === "done") set({ phase: "idle" });
 }
 
-export function openAppSettings() {
-  return deps?.plugin.openAppSettings();
+export async function openAppSettings() {
+  try {
+    await deps?.plugin.openAppSettings();
+  } catch (e) {
+    if (state.phase === "done") {
+      set({ ...state, result: { ...state.result, message: errorMessage(e) } });
+    }
+  }
 }
