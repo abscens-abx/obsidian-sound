@@ -22,8 +22,9 @@ const btn =
 function summary(r: ScanResult): string {
   switch (r.status) {
     case "permission-denied":
-      return "Music access was not granted. LAWLIET only reads audio files, and only when you ask it to.";
+      return r.message ?? "Music access was not granted. LAWLIET only reads audio files, and only when you ask it to.";
     case "partial":
+      return `${r.added} added · ${r.updated} refreshed · ${r.failed} could not be read · ${r.skipped} skipped. ${r.message ?? "Existing tracks were kept."}`;
     case "access-lost":
     case "failed":
       return r.message ?? "The scan could not finish.";
@@ -113,6 +114,11 @@ export function LibrarySources() {
               <div className="space-y-3">
                 <p className="text-muted-foreground">{summary(state.result)}</p>
                 <div className="flex flex-wrap gap-3">
+                  {state.result.status === "access-lost" && (
+                    <Button variant="outline" type="button" className={btn} onClick={() => void importNewFolder()}>
+                      Choose folder again
+                    </Button>
+                  )}
                   {state.result.status === "permission-denied" && (
                     <>
                       <Button

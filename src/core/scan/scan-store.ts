@@ -89,7 +89,7 @@ export function startDeviceScan() {
   return run(job, async (d, signal) => {
     const r = await scanMediaStore(d.plugin, d.repo, { signal, onProgress: progress(job) });
     // Exercised end to end: permission granted and MediaStore read fully.
-    if (r.status === "permission-denied") markCapability("localDiscovery", false);
+    if (r.status !== "completed" && r.status !== "cancelled") markCapability("localDiscovery", false);
     if (r.status === "completed") markCapability("localDiscovery", true);
     return r;
   });
@@ -122,6 +122,7 @@ export function importNewFolder() {
       { signal, onProgress: progress(job) },
     );
     if (r.status === "completed") markCapability("folderImport", true);
+    else if (r.status !== "cancelled") markCapability("folderImport", false);
     return r;
   });
 }
@@ -131,6 +132,7 @@ export function rescanFolder(source: { id: string; treeUri: string; displayName:
   return run(job, async (d, signal) => {
     const r = await scanFolder(d.plugin, d.repo, source, { signal, onProgress: progress(job) });
     if (r.status === "completed") markCapability("folderImport", true);
+    else if (r.status !== "cancelled") markCapability("folderImport", false);
     return r;
   });
 }
