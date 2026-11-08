@@ -16,4 +16,21 @@ internal object LibraryRules {
     }
 
     fun pageSize(requested: Int): Int = requested.coerceIn(1, 500)
+
+    /** JSON numbers may be Integer, Long or Double at the Capacitor boundary. */
+    fun cursor(value: Any?): Long {
+        if (value == null) return 0L
+        require(value is Number) { "Invalid MediaStore cursor" }
+        val number = value.toDouble()
+        require(number.isFinite() && number >= 0 && number <= 9007199254740991.0 && number % 1.0 == 0.0) {
+            "Invalid MediaStore cursor"
+        }
+        return value.toLong()
+    }
+
+    fun trackParts(value: Long?): Pair<Long?, Long?> = when {
+        value == null || value <= 0 -> null to null
+        value >= 1000 -> (value % 1000).takeIf { it > 0 } to value / 1000
+        else -> value to null
+    }
 }
