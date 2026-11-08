@@ -196,14 +196,17 @@ export async function scanFolder(
     const listing = await plugin.listFolderAudio({ treeUri: source.treeUri });
     docs = [...new Map(listing.items.map((d) => [d.uri, d])).values()];
     if (docs.some((d) => normalizeSourceUri(d.uri) !== d.uri)) {
-      throw new Error("The provider returned an invalid document reference. Existing tracks were kept.");
+      throw new Error(
+        "The provider returned an invalid document reference. Existing tracks were kept.",
+      );
     }
     if (signal?.aborted) {
       await writer.finishScan(source.id, scanId, "cancelled");
       return empty("cancelled");
     }
     if (listing.truncated) {
-      result.message = "The provider returned an incomplete listing or the import limit was reached. Existing tracks were kept; try again.";
+      result.message =
+        "The provider returned an incomplete listing or the import limit was reached. Existing tracks were kept; try again.";
     }
   } catch (e) {
     await writer.finishScan(source.id, scanId, "failed");
@@ -245,7 +248,10 @@ export async function scanFolder(
           continue;
         }
         const document = docs.slice(i, i + pageSize).find((d) => d.uri === raw.uri);
-        const t = normalizeAudioItem({ ...document, ...raw, modifiedMs: raw.modifiedMs ?? document?.modifiedMs }, "saf");
+        const t = normalizeAudioItem(
+          { ...document, ...raw, modifiedMs: raw.modifiedMs ?? document?.modifiedMs ?? null },
+          "saf",
+        );
         if (t) batch.push(t);
         else result.skipped++;
       }

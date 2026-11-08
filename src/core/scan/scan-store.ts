@@ -89,7 +89,8 @@ export function startDeviceScan() {
   return run(job, async (d, signal) => {
     const r = await scanMediaStore(d.plugin, d.repo, { signal, onProgress: progress(job) });
     // Exercised end to end: permission granted and MediaStore read fully.
-    if (r.status !== "completed" && r.status !== "cancelled") markCapability("localDiscovery", false);
+    if (r.status !== "completed" && r.status !== "cancelled")
+      markCapability("localDiscovery", false);
     if (r.status === "completed") markCapability("localDiscovery", true);
     return r;
   });
